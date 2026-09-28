@@ -29,14 +29,18 @@ Python compatible. Ce fichier inclut aussi les dépendances de développement.
 
 Les quatre onglets utilisent les mêmes dates et régions ; les passeports en
 focus sont mis en évidence sans réduire le panel de comparaison.
-Sur petit écran, cocher « Empiler les années » dans la vue des distributions.
 
-| Vue | Question |
-|---|---|
-| Distributions régionales | Comment comparer les niveaux et la dispersion dans les régions ? |
-| Trajectoires | Comment distinguer le gain d'accès et le recul dans le classement ? |
-| Recompositions | Comment les positions finales se situent-elles par rapport au niveau initial ? |
-| Variations | Quels passeports présentent les changements les plus forts et les plus faibles ? |
+| Vue | Question | Graphique |
+|---|---|---|
+| Niveaux par région | Où en est chaque région, du départ à l'arrivée ? | Médianes reliées : point gris (départ), point coloré (arrivée) |
+| Trajectoires | Comment l'accès des passeports suivis a-t-il évolué ? | Courbes annuelles, une couleur par pays, nom au bout de la courbe ; années sans score grisées ; mode rang aux extrémités comme un bump chart |
+| Départs et arrivées | D'où partent les pays suivis et où arrivent-ils ? | Diagramme de pente, variation absolue puis relative écrites au milieu |
+| Gains et pertes | Qui a le plus gagné, qui a le plus perdu ? | Barres divergentes : bleu = gain, orange = recul |
+
+Les encodages sont volontairement simples et alignés sur le cadre du cours :
+position et longueur pour comparer précisément, une couleur par catégorie,
+aucun double encodage inutile, valeurs écrites sur les figures pour une
+lecture sans survol, densité visuelle limitée à ce que demande chaque tâche.
 
 Les noms de pays restent ceux de la source. Le score est un nombre de
 **destinations**, incluant sans visa, visa à l'arrivée et ETA selon Henley.
@@ -73,6 +77,9 @@ Un e-visa à approbation préalable n'est pas inclus.
 - `docs\audit_ia.md` : arbitrages et critique ; `docs\journal_de_bord.md` :
   source du journal ; `livrables\journal_de_bord_v1.pdf` : version de lecture.
 - `docs\repartition_et_oral.md` : rôles, arguments et préparation à quatre.
+- `docs\support_presentation.html` : support de présentation (problématique,
+  justification de chaque graphique, lecture des axes) ; `livrables\support_presentation.pdf` :
+  version de lecture, 3 pages.
 - `livrables\dashboard.html` : export autonome du produit, utile pour la
   démonstration de secours ; les filtres coordonnés restent dans Streamlit.
 - `livrables\proposition_ia.html` : proposition IA conservée séparément.

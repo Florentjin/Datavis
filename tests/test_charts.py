@@ -6,13 +6,17 @@ import pandas as pd
 import plotly.graph_objects as go
 import pytest
 
-from passport_dashboard.charts import changes, positions, regional_distribution, trajectories
+from passport_dashboard.charts import changes, country_slopes, regional_medians, trajectories
 from passport_dashboard.theme import (
+    COUNTRY_COLORS,
     FONT_FAMILY,
+    GAIN_COLOR,
     GRID_COLOR,
+    LOSS_COLOR,
     REGION_COLORS,
     REGION_LABELS,
     REGIONS,
+    START_DOT_COLOR,
     TEXT_COLOR,
     apply_theme,
 )
@@ -71,6 +75,7 @@ def test_theme_is_local_responsive_and_uses_shared_tokens():
     assert figure.layout.autosize is True
     assert tuple(REGION_COLORS) == REGIONS
     assert set(REGION_COLORS) == set(REGION_LABELS)
+    assert len(COUNTRY_COLORS) == 4
 
 
 @pytest.mark.parametrize("title", ["Titre simple", "<b>Titre déjà en gras</b>"])
@@ -89,11 +94,10 @@ def test_theme_does_not_rewrap_titles_when_applied_repeatedly(title):
 @pytest.mark.parametrize(
     "constructor",
     [
-        lambda frame: regional_distribution(frame, 2006, 2026, []),
-        lambda frame: regional_distribution(frame, 2006, 2026, [], stacked=True),
+        lambda frame: regional_medians(frame, 2006, 2026),
         lambda frame: trajectories(frame),
         lambda frame: trajectories(frame, "rank"),
-        lambda frame: positions(frame, 2006, 2026, []),
+        lambda frame: country_slopes(frame, 2006, 2026, ["FRA"]),
         lambda frame: changes(frame, 2006, 2026),
     ],
 )
@@ -115,78 +119,40 @@ def test_trajectories_reject_invalid_metrics_even_for_empty_frames(metric):
         trajectories(pd.DataFrame(), metric)
 
 
-@pytest.mark.parametrize("stacked", [False, True])
-def test_boxes_use_raw_values_linear_quartiles_and_common_zero_scale(panel, stacked):
-    figure = regional_distribution(panel, 2006, 2026, [], stacked=stacked)
-    boxes = [trace for trace in figure.data if trace.type == "box"]
+def test_dumbbell_shows_median_positions_with_written_values(panel):
+    figure = regional_medians(panel, 2006, 2026)
 
-    assert len(boxes) == 6
-    for trace in boxes:
-        endpoint = "score_start" if trace.xaxis == "x" else "score_end"
-        rows = panel.loc[panel["region"].eq(trace.legendgroup)]
-        assert trace.orientation == "h"
-        assert trace.quartilemethod == "linear"
-        assert sorted(trace.x) == sorted(rows[endpoint].tolist())
-        assert set(trace.ids) == set(rows["code"])
-        assert len(trace.y) == len(rows)
-        assert all(f"n = {len(rows)}" in label for label in trace.y)
-        assert trace.line.color == REGION_COLORS[trace.legendgroup]
-        assert trace.line.width >= 2
-        assert trace.opacity == 1
-        assert trace.fillcolor.startswith("rgba(")
-        assert trace.name == REGION_LABELS[trace.legendgroup]
-    assert figure.layout.xaxis.range == figure.layout.xaxis2.range
-    assert figure.layout.xaxis.dtick == figure.layout.xaxis2.dtick == 50
-    assert figure.layout.xaxis.tickangle == figure.layout.xaxis2.tickangle == 0
-    assert figure.layout.showlegend is False
+    traces = [trace for trace in figure.data if trace.mode and "lines" in trace.mode]
+    assert len(traces) == panel["region"].nunique()
+    for trace in traces:
+        region = trace.legendgroup
+        rows = panel.loc[panel["region"].eq(region)]
+        start_median = float(rows["score_start"].median())
+        end_median = float(rows["score_end"].median())
+        assert trace.x == (start_median, end_median)
+        assert trace.text == (f"{start_median:.0f}", f"{end_median:.0f}")
+        assert trace.marker.color == (START_DOT_COLOR, REGION_COLORS[region])
+        assert trace.marker.size[1] > trace.marker.size[0]
+        assert trace.name == REGION_LABELS[region]
+        assert "2006" in trace.hovertemplate and "2026" in trace.hovertemplate
+        assert len({label for label in trace.y}) == 1
+        assert "n = " in trace.y[0]
     assert figure.layout.xaxis.range[0] == 0
     assert figure.layout.xaxis.range[1] > max(panel["score_start"].max(), panel["score_end"].max())
-    assert figure.layout.yaxis.categoryarray == figure.layout.yaxis2.categoryarray
-    assert figure.layout.yaxis.categoryarray == (
-        "Europe (n = 2)", "Asie (n = 2)", "Afrique (n = 2)"
+    assert figure.layout.showlegend is False
+    assert figure.layout.yaxis.autorange == "reversed"
+
+
+def test_dumbbell_orders_regions_by_arrival_median_descending(panel):
+    figure = regional_medians(panel, 2006, 2026)
+
+    order = figure.layout.yaxis.categoryarray
+    medians = panel.groupby("region", observed=True)["score_end"].median()
+    expected = sorted(
+        medians.index, key=lambda region: (-medians[region], region)
     )
-    assert figure.layout.yaxis.autorange == figure.layout.yaxis2.autorange == "reversed"
-
-
-def test_stacked_distribution_uses_full_width_and_repeats_count_labels(panel):
-    horizontal = regional_distribution(panel, 2006, 2026, ["FRA"])
-    stacked = regional_distribution(panel, 2006, 2026, ["FRA"], stacked=True)
-
-    assert stacked.layout.xaxis.domain == stacked.layout.xaxis2.domain == (0, 1)
-    assert stacked.layout.yaxis.domain[0] > stacked.layout.yaxis2.domain[1]
-    assert horizontal.layout.xaxis.domain[1] < horizontal.layout.xaxis2.domain[0]
-    assert horizontal.layout.yaxis.domain == horizontal.layout.yaxis2.domain
-    assert stacked.layout.xaxis.showticklabels is True
-    assert stacked.layout.xaxis2.showticklabels is True
-    assert stacked.layout.yaxis.showticklabels is True
-    assert stacked.layout.yaxis2.showticklabels is True
-    assert stacked.layout.height > horizontal.layout.height
-    assert stacked.layout.width is None
-    assert sum(trace.showlegend is True for trace in stacked.data) == panel["region"].nunique()
-    assert [trace.to_plotly_json() for trace in stacked.data] == [
-        trace.to_plotly_json() for trace in horizontal.data
-    ]
-
-
-@pytest.mark.parametrize("stacked", [False, True])
-def test_box_focus_is_unambiguous_and_contains_both_endpoint_scores(panel, stacked):
-    figure = regional_distribution(
-        panel, 2006, 2026, ["FRA", "NGA", "UNKNOWN"], stacked=stacked
-    )
-    overlays = [trace for trace in figure.data if trace.type == "scatter"]
-
-    assert len(overlays) == 4
-    assert sorted(code for trace in overlays for code in trace.ids) == ["FRA", "FRA", "NGA", "NGA"]
-    for trace in overlays:
-        assert trace.mode == "markers"
-        assert trace.marker.symbol == "diamond"
-        assert trace.marker.line.width > 0
-        assert "2006" in trace.hovertemplate and "2026" in trace.hovertemplate
-        for point in trace.customdata:
-            row = panel.loc[panel["code"].eq(point[0])].iloc[0]
-            assert point[1] == row["country"]
-            assert list(point[2:5]) == [row["score_start"], row["score_end"], row["delta"]]
-            assert trace.marker.color == REGION_COLORS[row["region"]]
+    labels = [label.split(" (n")[0] for label in order]
+    assert labels == [REGION_LABELS[region] for region in expected]
 
 
 def test_trajectories_keep_explicit_annual_nulls_despite_available_rank(series):
@@ -205,31 +171,34 @@ def test_trajectories_keep_explicit_annual_nulls_despite_available_rank(series):
     assert figure.layout.xaxis.dtick >= 1
     assert float(figure.layout.xaxis.dtick).is_integer()
     assert figure.layout.xaxis.tickformat == ".0f"
-    assert not hasattr(figure.layout, "yaxis2") or figure.layout.yaxis2 is None
 
 
-def test_annual_point_ids_are_unique_so_isolated_observations_remain_visible(series):
-    figure = trajectories(series)
-    all_ids = []
-    for trace in figure.data:
-        assert trace.mode == "lines+markers"
-        assert trace.marker.size > 0
-        assert len(trace.ids) == len(trace.x) == len(set(trace.ids))
-        assert tuple(trace.ids) == tuple(f"{trace.legendgroup}-{year}" for year in trace.x)
-        all_ids.extend(trace.ids)
-    assert len(all_ids) == len(set(all_ids))
-
-
-def test_same_region_countries_have_distinct_dash_marker_and_country_legend(series):
+def test_trajectories_use_one_color_and_one_label_per_country(series):
     figure = trajectories(series)
 
     assert {trace.name for trace in figure.data} == {"France", "Allemagne"}
-    assert len({trace.line.dash for trace in figure.data}) == 2
-    assert len({trace.marker.symbol for trace in figure.data}) == 2
+    colors = [trace.line.color for trace in figure.data]
+    assert all(trace.line.color == trace.marker.color for trace in figure.data)
+    assert len(set(colors)) == len(colors)
+    assert all(color in COUNTRY_COLORS for color in colors)
+    assert all(trace.line.dash in (None, "solid") for trace in figure.data)
+    labels = {item.text for item in figure.layout.annotations}
+    assert labels == {"France", "Allemagne"}
+    for item in figure.layout.annotations:
+        trace = next(trace for trace in figure.data if trace.name == item.text)
+        assert item.font.color == trace.line.color
+    assert figure.layout.showlegend is False
     for trace in figure.data:
-        assert trace.line.color == trace.marker.color == REGION_COLORS["EUROPE"]
-        assert trace.legendgroup in {"FRA", "DEU"}
         assert "%{customdata[0]}" in trace.hovertemplate
+
+
+def test_trajectory_labels_sit_on_the_last_observed_point(series):
+    figure = trajectories(series)
+    france = next(trace for trace in figure.data if trace.name == "France")
+    label = next(item for item in figure.layout.annotations if item.text == "France")
+
+    assert (label.x, label.y) == (2008, 185)
+    assert label.xanchor == "left"
 
 
 def test_ranks_are_reversed_start_at_one_and_preserve_their_own_missing_values(series):
@@ -253,118 +222,149 @@ def test_all_missing_metric_has_no_data_state_without_rank_fallback(series):
     assert trajectories(series, "rank").data
 
 
-def test_positions_axes_are_numerically_and_physically_square(panel):
-    figure = positions(panel, 2006, 2026, ["FRA"])
-    xaxis, yaxis = figure.layout.xaxis, figure.layout.yaxis
+def test_slopes_draw_one_line_per_focus_country_with_both_scores(panel):
+    figure = country_slopes(panel, 2006, 2026, ["FRA", "NGA", "UNKNOWN"])
 
-    assert xaxis.range == yaxis.range
-    assert xaxis.range[0] == 0
-    assert xaxis.range[1] > max(panel["score_start"].max(), panel["score_end"].max())
-    assert yaxis.scaleanchor == "x"
-    assert yaxis.scaleratio == 1
-    assert xaxis.constrain == yaxis.constrain == "domain"
-    diagonal = next(shape for shape in figure.layout.shapes if shape.type == "line")
-    assert diagonal.x0 == diagonal.y0 == 0
-    assert diagonal.x1 == diagonal.y1 == xaxis.range[1]
-    assert diagonal.xref == "x" and diagonal.yref == "y"
-    assert any("Score inchangé" in item.text for item in figure.layout.annotations)
-    assert figure.layout.width is None
-
-
-def test_positions_use_constant_sizes_selected_labels_and_outlines(panel):
-    figure = positions(panel, 2006, 2026, ["FRA", "NGA"])
-    sizes = set()
-    for trace in figure.data[:-1]:
-        assert trace.mode == "markers"
-        assert trace.text is None
-        sizes.add(trace.marker.size)
-        assert trace.marker.color == REGION_COLORS[trace.legendgroup]
-        assert trace.name == REGION_LABELS[trace.legendgroup]
+    traces = [trace for trace in figure.data if trace.type == "scatter"]
+    assert sorted(trace.name for trace in traces) == ["France", "Nigeria"]
+    for trace in traces:
+        row = panel.loc[panel["code"].eq(trace.ids[0][:3])].iloc[0]
+        assert trace.x == (0, 1)
+        assert trace.y == (float(row["score_start"]), float(row["score_end"]))
+        assert trace.mode == "lines+markers"
         assert "2006" in trace.hovertemplate and "2026" in trace.hovertemplate
-        assert "%{customdata[4]" in trace.hovertemplate
-        for code, width in zip(trace.ids, trace.marker.line.width):
-            if code in {"FRA", "NGA"}:
-                assert width > 1
-            else:
-                assert width < 1
-    assert sizes == {10}
-    labels = figure.data[-1]
-    assert labels.mode == "text"
-    assert labels.cliponaxis is False
-    assert labels.showlegend is False
-    assert labels.hoverinfo == "skip"
-    assert labels.textfont.shadow
-    assert set(labels.text) == {"France", "Nigeria"}
-    assert set(labels.ids) == {"FRA", "NGA"}
+    assert figure.layout.xaxis.ticktext == ("2006", "2026")
+    assert figure.layout.yaxis.range[0] == 0
 
 
-def test_positions_focus_labels_face_inward_and_follow_all_regional_points(panel):
-    selected = panel.iloc[:3].copy()
-    selected["code"] = ["AFG", "USA", "EDGE"]
-    selected["country"] = ["Afghanistan", "United States", "Pays à droite"]
-    selected["region"] = ["ASIA", "AMERICAS", "EUROPE"]
-    selected["score_start"] = [12, 130, 195]
-    selected["score_end"] = [24, 181, 195]
-    selected["delta"] = selected["score_end"] - selected["score_start"]
+def test_slopes_share_country_colors_with_trajectories(panel, series):
+    slopes = country_slopes(panel, 2006, 2026, ["FRA", "DEU"])
+    both = series.loc[series["code"].isin(["FRA", "DEU"])]
 
-    figure = positions(selected, 2006, 2026, ["AFG", "USA", "EDGE"])
+    slope_colors = {
+        trace.name: trace.line.color for trace in slopes.data if trace.type == "scatter"
+    }
+    figure = trajectories(both)
+    trajectory_colors = {trace.name: trace.line.color for trace in figure.data}
 
-    assert all(trace.mode == "markers" for trace in figure.data[:-1])
-    labels = figure.data[-1]
-    assert labels.mode == "text"
-    assert labels.cliponaxis is False
-    placement = dict(zip(labels.ids, labels.textposition))
-    assert placement["AFG"] == "top right"
-    assert placement["USA"] == "bottom right"
-    assert placement["EDGE"] == "bottom left"
-    assert labels.x == tuple(selected["score_start"])
-    assert labels.y == tuple(selected["score_end"])
+    assert slope_colors == trajectory_colors
 
 
-def test_changes_preserve_unique_codes_signed_values_and_zero_based_bars(extremes):
-    figure = changes(extremes, 2006, 2026)
-    seen = []
+def test_slopes_annotate_absolute_and_relative_variation(panel):
+    figure = country_slopes(panel, 2006, 2026, ["FRA", "NGA"])
+
+    annotations = figure.layout.annotations
+    texts = [item.text for item in annotations]
+    assert "150" in texts  # France au départ
+    assert "France · 185" in texts  # France à l'arrivée
+    deltas = [item for item in annotations if "·" in str(item.text) and "%" in str(item.text)]
+    assert {item.text for item in deltas} == {"+35 · +23 %", "-5 · -11 %"}
+    gain = next(item for item in deltas if item.text.startswith("+35"))
+    loss = next(item for item in deltas if item.text.startswith("-5"))
+    assert gain.font.color == GAIN_COLOR
+    assert loss.font.color == LOSS_COLOR
+
+
+def test_close_endpoint_labels_are_staggered_without_moving_their_anchor(panel, series):
+    close_panel = panel.loc[panel["code"].isin(["FRA", "DEU"])]
+
+    slopes = country_slopes(close_panel, 2006, 2026, ["FRA", "DEU"])
+    end_labels = [
+        item
+        for item in slopes.layout.annotations
+        if "·" in str(item.text) and "%" not in str(item.text)
+    ]
+    assert {item.text for item in end_labels} == {"France · 185", "Allemagne · 180"}
+    for item in end_labels:
+        row = close_panel.loc[close_panel["country"].eq(str(item.text).split(" · ")[0])].iloc[0]
+        assert item.y == float(row["score_end"])  # l'ancre reste la vraie valeur
+    shifts = {item.text: item.yshift for item in end_labels}
+    assert shifts["France · 185"] != shifts["Allemagne · 180"]
+
+    figure = trajectories(series)
+    labels = {item.text: item for item in figure.layout.annotations}
+    assert labels["France"].y == 185 and labels["Allemagne"].y == 180
+    assert labels["France"].yshift != labels["Allemagne"].yshift
+
+
+def test_dumbbell_hover_shows_relative_variation_too(panel):
+    figure = regional_medians(panel, 2006, 2026)
+
     for trace in figure.data:
-        assert trace.type == "bar"
-        assert trace.orientation == "h"
-        assert trace.base == 0
-        assert trace.marker.color == REGION_COLORS[trace.legendgroup]
-        assert trace.name == REGION_LABELS[trace.legendgroup]
-        for code, value, label in zip(trace.ids, trace.x, trace.text):
-            seen.append(code)
-            expected = extremes.loc[extremes["code"].eq(code), "delta"].iloc[0]
-            assert value == expected
-            assert label == (f"+{expected:g}" if expected > 0 else f"{expected:g}")
-    assert len(seen) == len(set(seen)) == len(extremes)
-    assert set(seen) == set(extremes["code"])
-    assert figure.layout.xaxis.range[0] == -figure.layout.xaxis.range[1]
-    assert figure.layout.xaxis.range[0] < extremes["delta"].min() < 0
+        assert "%" in trace.hovertemplate
+
+
+def test_years_without_any_observation_are_shaded(series):
+    series.loc[series["year"].eq(2007), "score"] = pd.NA
+
+    figure = trajectories(series)
+
+    bands = [shape for shape in figure.layout.shapes if shape.type == "rect"]
+    assert len(bands) == 1
+    assert bands[0].x0 == 2007 - 0.45 and bands[0].x1 == 2007 + 0.45
+    assert any("aucun score" in str(item.text) for item in figure.layout.annotations)
+    series.loc[series["year"].eq(2007), "rank"] = pd.NA
+    rank_figure = trajectories(series, "rank")
+    rank_bands = [shape for shape in rank_figure.layout.shapes if shape.type == "rect"]
+    assert len(rank_bands) == 1
+    assert any("aucun rang" in str(item.text) for item in rank_figure.layout.annotations)
+
+
+def test_years_with_partial_observations_are_not_shaded(series):
+    figure = trajectories(series)
+
+    assert not [shape for shape in figure.layout.shapes if shape.type == "rect"]
+
+
+def test_rank_mode_labels_both_ends_like_a_bump_chart(series):
+    figure = trajectories(series, "rank")
+
+    texts = [item.text for item in figure.layout.annotations]
+    assert any(text == "France · 1" for text in texts)
+    assert any(text == "Allemagne · 3" for text in texts)
+    left_numbers = [item for item in figure.layout.annotations if str(item.text).isdigit()]
+    assert {item.text for item in left_numbers} == {"3", "1"}
+    assert all(item.xanchor == "right" for item in left_numbers)
+
+
+def test_changes_use_diverging_colors_zero_baseline_and_signed_labels(extremes):
+    figure = changes(extremes, 2006, 2026)
+
+    (bar,) = figure.data
+    assert bar.type == "bar"
+    assert bar.orientation == "h"
+    assert bar.base == 0
+    for code, value, color, label in zip(bar.ids, bar.x, bar.marker.color, bar.text):
+        expected = extremes.loc[extremes["code"].eq(code), "delta"].iloc[0]
+        assert value == expected
+        assert color == (GAIN_COLOR if expected > 0 else LOSS_COLOR)
+        assert label == (f"+{expected:g}" if expected > 0 else f"{expected:g}")
+    assert len(set(bar.ids)) == len(bar.ids) == len(extremes)
+    assert 0 >= figure.layout.xaxis.range[0]
+    assert 0 <= figure.layout.xaxis.range[1]
     assert figure.layout.xaxis.zeroline is True
-    assert "Variations les plus faibles et les plus fortes" in figure.layout.title.text
 
 
-def test_changes_sort_within_explicit_groups_and_separate_them(extremes):
+def test_changes_sort_extremes_from_biggest_gain_to_biggest_loss(extremes):
     figure = changes(extremes.sample(frac=1, random_state=8), 2006, 2026)
 
-    assert tuple(figure.layout.yaxis.ticktext) == ("Nigeria", "Kenya", "France", "Japon")
-    positions_by_country = dict(zip(figure.layout.yaxis.ticktext, figure.layout.yaxis.tickvals))
-    assert positions_by_country["France"] - positions_by_country["Kenya"] > 1
-    assert len(figure.layout.shapes) == 1
-    assert {annotation.text for annotation in figure.layout.annotations} == {
-        "<b>Faibles variations</b>", "<b>Fortes variations</b>"
-    }
+    (bar,) = figure.data
+    deltas = list(bar.x)
+    assert deltas == sorted(deltas, reverse=True)
+    assert figure.layout.yaxis.categoryarray == tuple(bar.y)
+    assert figure.layout.yaxis.autorange == "reversed"
 
 
 @pytest.mark.parametrize(
     ("deltas", "title_fragment", "excluded"),
     [
-        ([1, 2, 3, 4], "Variations les plus faibles", "Reculs"),
-        ([-4, -3, -2, -1], "Reculs les plus marqués", "gains"),
-        ([0, 0, 0, 0], "Scores inchangés", "gains"),
-        ([-4, -3, -2, 0], "Reculs et scores inchangés", "gains"),
+        ([1, 2, 3, 4], "Gains les plus forts", "Reculs"),
+        ([-4, -3, -2, -1], "Reculs les plus marqués", "Gains"),
+        ([0, 0, 0, 0], "Scores inchangés", "Gains"),
+        ([-4, -3, -2, 0], "Reculs et scores inchangés", "Gains"),
     ],
 )
-def test_changes_titles_do_not_call_positive_low_changes_losses(extremes, deltas, title_fragment, excluded):
+def test_changes_titles_reflect_the_signs_really_present(extremes, deltas, title_fragment, excluded):
     extremes["delta"] = deltas
     extremes["score_end"] = extremes["score_start"] + extremes["delta"]
 
@@ -372,41 +372,15 @@ def test_changes_titles_do_not_call_positive_low_changes_losses(extremes, deltas
 
     assert title_fragment in figure.layout.title.text
     assert excluded not in figure.layout.title.text
-    assert figure.layout.xaxis.range[0] < 0 < figure.layout.xaxis.range[1]
 
 
-def test_changes_do_not_describe_a_mixed_bottom_five_as_losses():
-    extremes = pd.DataFrame(
-        [
-            {
-                "code": f"C{index}",
-                "country": f"Pays {index}",
-                "region": "ASIA",
-                "score_start": 80,
-                "score_end": 80 + delta,
-                "rank_start": 20,
-                "rank_end": 20,
-                "delta": delta,
-                "group": "Faibles variations" if index < 5 else "Fortes variations",
-            }
-            for index, delta in enumerate([-8, 1, 2, 3, 4, 21, 22, 23, 24, 25])
-        ]
-    )
-
-    figure = changes(extremes, 2006, 2026)
-
-    assert figure.layout.title.text.startswith("Variations les plus faibles et les plus fortes")
-    assert "Reculs" not in figure.layout.title.text
-
-
-@pytest.mark.parametrize("size", [1, 2, 3])
-def test_small_change_cohorts_are_not_duplicated(extremes, size):
-    tiny = extremes.iloc[:size]
+def test_small_change_cohorts_are_not_duplicated(extremes):
+    tiny = extremes.iloc[:3]
 
     figure = changes(tiny, 2006, 2026)
 
-    codes = [code for trace in figure.data for code in trace.ids]
-    assert len(codes) == len(set(codes)) == size
+    (bar,) = figure.data
+    assert len(set(bar.ids)) == len(bar.ids) == 3
 
 
 def test_region_palette_is_consistent_for_all_seven_regions():
@@ -426,24 +400,12 @@ def test_region_palette_is_consistent_for_all_seven_regions():
             for index, region in enumerate(REGIONS)
         ]
     )
-    series = panel.rename(
-        columns={"score_start": "score", "rank_start": "rank"}
-    ).assign(year=2006)
-    figures = (
-        regional_distribution(panel, 2006, 2026, []),
-        trajectories(series),
-        positions(panel, 2006, 2026, []),
-        changes(panel, 2006, 2026),
-    )
+    figure = regional_medians(panel, 2006, 2026)
 
-    for figure in figures:
-        for trace in figure.data:
-            is_trajectory = trace.type == "scatter" and "lines" in trace.mode
-            code = trace.legendgroup if is_trajectory else trace.ids[0]
-            region = panel.loc[panel["code"].eq(code), "region"].iloc[0]
-            assert trace.marker.color == REGION_COLORS[region]
-            if trace.type != "scatter" or "lines" not in trace.mode:
-                assert trace.name == REGION_LABELS[region]
+    for trace in figure.data:
+        region = trace.legendgroup
+        assert trace.marker.color[1] == REGION_COLORS[region]
+        assert trace.name == REGION_LABELS[region]
 
 
 def test_constructors_do_not_mutate_input_frames(panel, series, extremes):
@@ -451,8 +413,8 @@ def test_constructors_do_not_mutate_input_frames(panel, series, extremes):
     original_series = series.copy(deep=True)
     original_extremes = extremes.copy(deep=True)
 
-    regional_distribution(panel, 2006, 2026, ["FRA"])
-    positions(panel, 2006, 2026, ["FRA"])
+    regional_medians(panel, 2006, 2026)
+    country_slopes(panel, 2006, 2026, ["FRA"])
     trajectories(series)
     changes(extremes, 2006, 2026)
 

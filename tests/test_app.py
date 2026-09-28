@@ -50,7 +50,7 @@ def test_unavailable_baseline_focus_and_no_focus():
     assert any("Montenegro" in item.value for item in app.warning)
     app.multiselect(key="focus").set_value([]).run()
     assert not app.exception
-    assert len(app.get("plotly_chart")) == 3
+    assert len(app.get("plotly_chart")) == 2
 
 
 def test_access_snapshot_discloses_unknown_relationship():
@@ -59,14 +59,3 @@ def test_access_snapshot_discloses_unknown_relationship():
     assert not app.exception
     assert any("Relations non renseignées" in item.value and "MV" in item.value for item in app.warning)
     assert any("indépendant des dates filtrées" in item.value for item in app.caption)
-
-
-def test_compact_distribution_layout_and_reset():
-    app = make_app()
-    app.checkbox(key="compact").check().run()
-    assert not app.exception
-    assert app.checkbox(key="compact").value is True
-    assert len(app.get("plotly_chart")) == 4
-    app.button[0].click().run()
-    assert not app.exception
-    assert app.checkbox(key="compact").value is False

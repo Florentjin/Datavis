@@ -1,0 +1,2 @@
+# Les CSV sources doivent rester identiques aux octets près (test SHA-256).
+*.csv text eol=lf

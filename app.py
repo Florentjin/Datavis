@@ -89,7 +89,6 @@ def reset_controls() -> None:
     st.session_state["regions"] = list(REGIONS)
     st.session_state["focus"] = DEFAULT_FOCUS.copy()
     st.session_state["metric"] = "score"
-    st.session_state["compact"] = False
 
 
 def format_number(value: float, digits: int = 1) -> str:
@@ -130,7 +129,7 @@ with st.sidebar:
     end = st.selectbox(
         "Année d'arrivée", end_options, index=len(end_options) - 1, key="end"
     )
-    st.caption("2007 et 2009 : aucun score exploitable. Ces années restent visibles dans les courbes.")
+    st.caption("2007 et 2009 : aucun score exploitable. Elles apparaissent grisées dans les courbes.")
     regions = st.multiselect(
         "Régions",
         options=list(REGIONS),
@@ -226,32 +225,28 @@ if not panel.empty:
     last_ratio = float(dispersion.loc["end", "p90"] / dispersion.loc["end", "p10"])
     direction = "augmente" if last_gap > first_gap else "diminue" if last_gap < first_gap else "reste stable"
     st.markdown(
-        f"**Sur ce panel, la dispersion absolue {direction}.** L'écart entre les "
-        f"90e et 10e percentiles passe de **{format_number(first_gap)}** à "
-        f"**{format_number(last_gap)} destinations**. "
-        "Ce constat ne vaut pas pour toutes les mesures possibles d'inégalité."
+        f"**Sur ce panel, l'écart entre les passeports les mieux et les moins bien "
+        f"placés {direction}** : de **{format_number(first_gap)}** à "
+        f"**{format_number(last_gap)}** destinations d'écart (P90–P10)."
     )
     st.caption(
-        f"Autre mesure : le rapport P90/P10, sans unité, passe de "
+        f"Autre mesure : le rapport P90/P10 passe de "
         f"{format_number(first_ratio, 2)} à {format_number(last_ratio, 2)}. "
         "Écart absolu et rapport relatif peuvent évoluer dans des directions différentes."
     )
 
-tabs = st.tabs(["Distributions régionales", "Trajectoires", "Recompositions", "Variations"])
+tabs = st.tabs(["Niveaux par région", "Trajectoires", "Départs et arrivées", "Gains et pertes"])
 with tabs[0]:
-    st.subheader("Comparer les niveaux et les écarts à l'intérieur des régions")
-    compact = st.checkbox(
-        "Empiler les années (petit écran)", key="compact",
-        help="Les deux années sont placées l'une au-dessus de l'autre, avec les mêmes échelles.",
-    )
+    st.subheader(f"Où en est chaque région, de {start} à {end} ?")
     render_chart(
-        charts.regional_distribution(panel, start, end, active_focus, stacked=compact),
+        charts.regional_medians(panel, start, end),
         key="distribution",
     )
     st.caption(
-        "Même panel aux deux dates. La boîte contient les 50 % centraux, le trait "
-        "indique la médiane et les moustaches vont jusqu'aux dernières observations "
-        "à moins de 1,5 écart interquartile. Les points au-delà ne sont pas forcément des erreurs."
+        "Chaque ligne relie la médiane de départ (point gris) à la médiane d'arrivée "
+        "(point coloré) des passeports de la région. La médiane est la valeur du milieu : "
+        "la moitié des pays au-dessus, la moitié en dessous. Survolez une ligne pour lire "
+        "la variation en destinations et en pourcentage."
     )
     with st.expander("Médianes régionales et effectifs"):
         summary = regional_summary(panel)
@@ -272,9 +267,9 @@ with tabs[0]:
             )
 
 with tabs[1]:
-    st.subheader("Distinguer gain d'accès et recul dans le classement")
+    st.subheader("Comment l'accès des passeports suivis a-t-il évolué ?")
     metric = st.radio(
-        "Mesure des trajectoires", ["score", "rank"],
+        "Mesure", ["score", "rank"],
         format_func=lambda value: "Destinations accessibles" if value == "score" else "Rang mondial",
         horizontal=True, key="metric",
     )
@@ -284,8 +279,10 @@ with tabs[1]:
             charts.trajectories(series, metric), key="trajectories",
         )
         st.caption(
-            "Les trous ne sont pas interpolés. Un rang peut être disponible lorsque "
-            "le score ne l'est pas. En mode rang, le meilleur classement est en haut."
+            "Une couleur par passeport suivi, nommé au bout de sa courbe. "
+            "Les années grisées n'ont aucun score exploitable et les trous ne sont "
+            "pas interpolés. En mode rang, le classement de départ et d'arrivée est "
+            "écrit aux extrémités et le meilleur classement est en haut."
         )
         with st.expander("Valeurs des trajectoires"):
             st.dataframe(
@@ -297,18 +294,23 @@ with tabs[1]:
         st.info("Sélectionnez un passeport en focus appartenant aux régions affichées.")
 
 with tabs[2]:
-    st.subheader("Situer les recompositions par rapport au niveau initial")
-    render_chart(
-        charts.positions(panel, start, end, active_focus),
-        key="positions",
-    )
-    st.caption(
-        "Axes à même échelle : au-dessus de la diagonale, l'accès augmente ; en dessous, "
-        "il diminue. Chaque point représente un passeport, sans pondération démographique."
-    )
+    st.subheader(f"D'où partent les pays suivis et où arrivent-ils ({start} → {end}) ?")
+    if active_focus:
+        render_chart(
+            charts.country_slopes(panel, start, end, active_focus),
+            key="slopes",
+        )
+        st.caption(
+            "Monter signifie un gain de destinations, descendre une perte. "
+            "Au milieu de chaque ligne : la variation en destinations, puis la même "
+            "en pourcentage du score de départ — un petit score progresse vite en "
+            "pourcentage sans rattraper les grands."
+        )
+    else:
+        st.info("Sélectionnez un passeport en focus appartenant aux régions affichées.")
 
 with tabs[3]:
-    st.subheader("Identifier les variations les plus fortes et les plus faibles")
+    st.subheader("Qui a le plus gagné, qui a le plus perdu ?")
     extreme_panel = extremes(panel)
     render_chart(
         charts.changes(extreme_panel, start, end),
@@ -316,8 +318,7 @@ with tabs[3]:
     )
     st.caption(
         "Cinq variations les plus faibles et cinq plus fortes, sans doublons. "
-        "Une faible progression reste un gain, pas un déclin. "
-        "Les égalités sont départagées par le code pays, sans différence de valeur."
+        "Bleu : gain ; orange : recul. Une faible progression reste un gain, pas un déclin."
     )
 
 with st.expander("Comparer les valeurs et télécharger les résultats"):

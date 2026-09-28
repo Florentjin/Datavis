@@ -1,13 +1,28 @@
-"""Pure Plotly figures: all inputs are prepared data, never application state."""
+"""Pure Plotly figures: all inputs are prepared data, never application state.
 
-from collections import defaultdict
+Encodages volontairement simples, alignés sur le cadre du cours :
+position et longueur pour comparer précisément (Séance 2), une couleur par
+catégorie, pas de double encodage inutile et densité limitée (Séance 3).
+Chaque figure porte un titre sous forme de question dans l'application.
+"""
+
 from math import ceil, isfinite
 
 import pandas as pd
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
-from .theme import GRID_COLOR, REGION_COLORS, REGION_LABELS, REGIONS, TEXT_COLOR, apply_theme
+from .theme import (
+    COUNTRY_COLORS,
+    GAIN_COLOR,
+    GRID_COLOR,
+    LOSS_COLOR,
+    REGION_COLORS,
+    REGION_LABELS,
+    REGIONS,
+    START_DOT_COLOR,
+    TEXT_COLOR,
+    apply_theme,
+)
 
 
 def _region_keys(frame: pd.DataFrame) -> list[str]:
@@ -86,110 +101,112 @@ def _endpoint_hover(start: int, end: int) -> str:
     )
 
 
-def regional_distribution(
-    panel: pd.DataFrame,
-    start: int,
-    end: int,
-    focus: list[str],
-    stacked: bool = False,
-) -> go.Figure:
-    """Compare a common cohort; ``stacked`` gives both dates full-width panels."""
-    title = f"Distribution des scores par région — {start} et {end}"
+def _label_shifts(
+    values: list[float], top: float, inner: float, low: float, high: float,
+    min_gap: float = 17.0,
+) -> list[int]:
+    """Décalages verticaux en pixels pour écarter des étiquettes proches.
+
+    L'ancre reste la vraie valeur ; seul le texte bouge, de façon symétrique
+    autour des positions d'origine pour limiter la dérive.
+    """
+    if not values or high == low:
+        return [0] * len(values)
+    pixels = [top + (1 - (value - low) / (high - low)) * inner for value in values]
+    order = sorted(range(len(pixels)), key=lambda index: pixels[index])
+    spread = [pixels[index] for index in order]
+    for index in range(1, len(spread)):
+        if spread[index] - spread[index - 1] < min_gap:
+            spread[index] = spread[index - 1] + min_gap
+    drift = sum(spread) / len(spread) - sum(pixels) / len(pixels)
+    shifts = [0] * len(values)
+    for index, position in zip(order, spread):
+        shifts[index] = int(round(position - drift - pixels[index]))
+    return shifts
+
+
+def regional_medians(panel: pd.DataFrame, start: int, end: int) -> go.Figure:
+    """Médiane régionale aux deux dates : deux points reliés par région.
+
+    Lecture par position (attribut le plus précis du cours) : le point gris
+    situe la médiane de départ, le point coloré la médiane d'arrivée. Les
+    valeurs sont écrites à côté des points pour une lecture sans survol.
+    """
+    title = f"Quel niveau d'accès par région, de {start} à {end} ?"
     if panel.empty:
         return _empty(title)
 
-    medians = panel.groupby("region", observed=True)["score_end"].median()
-    stable_order = {region: index for index, region in enumerate(_region_keys(panel))}
-    regions = sorted(medians.index, key=lambda region: (-medians[region], stable_order[region]))
-    counts = panel.groupby("region", observed=True).size()
-    labels = {region: f"{_label(region)} (n = {counts[region]})" for region in regions}
-    order = [labels[region] for region in regions]
-    upper = _score_upper(panel["score_start"], panel["score_end"])
-    selected = set(focus)
-    figure = make_subplots(
-        rows=2 if stacked else 1,
-        cols=1 if stacked else 2,
-        shared_xaxes=stacked,
-        shared_yaxes=not stacked,
-        horizontal_spacing=0.075,
-        vertical_spacing=0.18,
-        subplot_titles=(str(start), str(end)),
+    summary = panel.groupby("region", observed=True).agg(
+        n=("code", "size"),
+        score_start=("score_start", "median"),
+        score_end=("score_end", "median"),
     )
-    for endpoint, score_column in enumerate(("score_start", "score_end"), start=1):
-        subplot_row, subplot_column = (endpoint, 1) if stacked else (1, endpoint)
-        for region in regions:
-            rows = panel.loc[panel["region"].eq(region)]
-            color = _color(region)
-            red, green, blue = (int(color[index:index + 2], 16) for index in (1, 3, 5))
-            figure.add_trace(
-                go.Box(
-                    x=_numbers(rows[score_column]),
-                    y=[labels[region]] * len(rows),
-                    ids=rows["code"].tolist(),
-                    orientation="h",
-                    quartilemethod="linear",
-                    boxpoints="outliers",
-                    whiskerwidth=0.5,
-                    width=0.52,
-                    line={"color": color, "width": 2},
-                    fillcolor=f"rgba({red}, {green}, {blue}, 0.18)",
-                    opacity=1,
-                    marker={"color": color, "size": 4},
-                    name=_label(region),
-                    legendgroup=region,
-                    showlegend=endpoint == 1,
-                    hoverinfo="x+y",
+    stable = {region: index for index, region in enumerate(_region_keys(panel))}
+    summary = (
+        summary.assign(_order=summary.index.map(stable))
+        .sort_values(["score_end", "_order"], ascending=[False, True], kind="stable")
+    )
+    labels = {
+        region: f"{_label(region)} (n = {int(row.n)})"
+        for region, row in summary.iterrows()
+    }
+    order = [labels[region] for region in summary.index]
+    upper = _score_upper(panel["score_start"], panel["score_end"])
+    figure = go.Figure()
+    for region, row in summary.iterrows():
+        values = _numbers([row.score_start, row.score_end])
+        delta = float(row.score_end - row.score_start)
+        count = int(row.n)
+        # Écart absolu et écart relatif affichés ensemble : le plus grand gain
+        # en destinations n'est pas forcément le plus grand en pourcentage.
+        relative = f" ({delta / values[0] * 100:+.0f} %)" if values[0] else ""
+        figure.add_trace(
+            go.Scatter(
+                x=values,
+                y=[labels[region]] * 2,
+                ids=[f"{region}-start", f"{region}-end"],
+                customdata=[
+                    [_label(region), count, values[0], values[1], delta]
+                ] * 2,
+                mode="lines+markers+text",
+                text=[f"{values[0]:.0f}", f"{values[1]:.0f}"],
+                textposition="top center",
+                textfont={"size": 12, "color": TEXT_COLOR},
+                line={"color": GRID_COLOR, "width": 3},
+                marker={
+                    "color": [START_DOT_COLOR, _color(region)],
+                    "size": [9, 12],
+                    "line": {"color": "#FFFFFF", "width": 1},
+                },
+                name=_label(region),
+                legendgroup=region,
+                showlegend=False,
+                hovertemplate=(
+                    "<b>%{customdata[0]}</b><br>%{customdata[1]} passeports"
+                    f"<br>Médiane {start} : %{{customdata[2]:.0f}}"
+                    f"<br>Médiane {end} : %{{customdata[3]:.0f}}"
+                    f"<br>Variation : %{{customdata[4]:+.0f}}{relative}"
+                    "<extra></extra>"
                 ),
-                row=subplot_row,
-                col=subplot_column,
             )
-            highlighted = rows.loc[rows["code"].isin(selected)]
-            if not highlighted.empty:
-                figure.add_trace(
-                    go.Scatter(
-                        x=_numbers(highlighted[score_column]),
-                        y=[labels[region]] * len(highlighted),
-                        ids=highlighted["code"].tolist(),
-                        customdata=_endpoint_data(highlighted),
-                        mode="markers",
-                        marker={
-                            "symbol": "diamond",
-                            "size": 11,
-                            "color": color,
-                            "line": {"color": TEXT_COLOR, "width": 1.8},
-                        },
-                        name="Pays sélectionnés",
-                        legendgroup=f"focus-{region}",
-                        showlegend=False,
-                        hovertemplate=_endpoint_hover(start, end),
-                    ),
-                    row=subplot_row,
-                    col=subplot_column,
-                )
+        )
 
     apply_theme(figure)
-    subtitle = "Même cohorte aux deux dates"
-    if panel["code"].isin(selected).any():
-        subtitle += ("<br>" if stacked else " · ") + "Diamants : pays sélectionnés"
-    if stacked:
-        title = "Distribution des scores par région"
     figure.update_layout(
-        title_text=f"{title}<br><sup>{subtitle}</sup>",
-        height=max(650, 88 * len(regions) + 280) if stacked else max(380, 55 * len(regions) + 190),
-        margin={"t": 145 if stacked else 115, "b": 110 if stacked else 95},
-        boxmode="overlay",
+        title_text=(
+            f"{title}<br><sup>Point gris : médiane {start} · point coloré : "
+            f"médiane {end} · la moitié des pays au-dessus, la moitié en dessous</sup>"
+        ),
+        height=max(340, 58 * len(summary) + 150),
+        margin={"t": 105, "b": 80},
         hovermode="closest",
         showlegend=False,
     )
-    if stacked:
-        figure.update_layout(legend_y=-0.10)
     figure.update_xaxes(
-        title_text="Score (destinations)",
+        title_text="Destinations accessibles (médiane)",
         range=[0, upper],
-        dtick=50,
-        tickangle=0,
+        dtick=25,
         tickformat=".0f",
-        showticklabels=True,
     )
     figure.update_yaxes(
         type="category",
@@ -199,16 +216,19 @@ def regional_distribution(
         showgrid=False,
         title_text=None,
     )
-    if stacked:
-        figure.update_yaxes(showticklabels=True)
     return figure
 
 
 def trajectories(series: pd.DataFrame, metric: str = "score") -> go.Figure:
-    """Plot annual observations; the application limits the selection to four countries."""
+    """Courbes annuelles : une couleur et une étiquette par passeport suivi.
+
+    Un seul encodage par pays (la couleur), le nom écrit au bout de la
+    courbe remplace la légende. Les années sans score interrompent la
+    ligne : aucun trou n'est interpolé.
+    """
     if metric not in {"score", "rank"}:
         raise ValueError("metric must be 'score' or 'rank'")
-    title = "Trajectoires des scores" if metric == "score" else "Trajectoires des rangs"
+    title = "Comment l'accès des passeports suivis a-t-il évolué ?"
     if series.empty:
         return _empty(title)
     values = _numbers(series[metric])
@@ -216,189 +236,266 @@ def trajectories(series: pd.DataFrame, metric: str = "score") -> go.Figure:
         return _empty(title)
 
     figure = go.Figure()
-    dashes = ("solid", "dash", "dot", "dashdot")
-    symbols = ("circle", "diamond", "square", "triangle-up")
-    region_indices = defaultdict(int)
     country_order = (
         series[["code", "country"]]
         .drop_duplicates("code")
         .sort_values(["country", "code"], kind="stable")["code"]
     )
-    for code in country_order:
+    prepared = []
+    for index, code in enumerate(country_order):
         rows = series.loc[series["code"].eq(code)].sort_values("year", kind="stable")
-        country = rows["country"].iloc[0]
-        region = rows["region"].iloc[0]
-        style = region_indices[region] % len(dashes)
-        region_indices[region] += 1
-        metric_label = "Score : %{y:.0f} destinations" if metric == "score" else "Rang : %{y:.0f}"
+        observed = rows.dropna(subset=[metric])
+        if observed.empty:
+            continue
+        prepared.append((index, code, rows, observed))
+
+    if metric == "score":
+        low, high = 0.0, _score_upper(series["score"])
+    else:
+        observed_values = [value for value in values if value is not None]
+        maximum = max(observed_values)
+        low = float(max(2, ceil(maximum + max(1, maximum * 0.05))))
+        high = 1.0  # axe inversé : le rang 1 reste en haut
+    # Écarter les noms d'arrivée trop proches sans déplacer leur ancre.
+    geometry = {"top": 100, "inner": 460 - 100 - 80, "low": low, "high": high}
+    end_shifts = _label_shifts(
+        [float(observed.iloc[-1][metric]) for (_, _, _, observed) in prepared],
+        **geometry,
+    )
+    start_shifts = _label_shifts(
+        [float(observed.iloc[0][metric]) for (_, _, _, observed) in prepared],
+        **geometry,
+    )
+
+    for (index, code, rows, observed), end_shift, start_shift in zip(
+        prepared, end_shifts, start_shifts
+    ):
+        country = str(rows["country"].iloc[0])
+        region = str(rows["region"].iloc[0])
+        color = COUNTRY_COLORS[index % len(COUNTRY_COLORS)]
+        metric_label = (
+            "Score : %{y:.0f} destinations" if metric == "score" else "Rang : %{y:.0f}"
+        )
         figure.add_trace(
             go.Scatter(
                 x=[int(year) for year in rows["year"]],
                 y=_numbers(rows[metric]),
                 ids=[f"{code}-{int(year)}" for year in rows["year"]],
-                customdata=[
-                    [country, _label(region), code] for _ in range(len(rows))
-                ],
+                customdata=[[country, _label(region), code] for _ in range(len(rows))],
                 name=country,
                 legendgroup=code,
                 mode="lines+markers",
                 connectgaps=False,
-                line={"color": _color(region), "width": 2.4, "dash": dashes[style]},
-                marker={
-                    "color": _color(region),
-                    "size": 7,
-                    "symbol": symbols[style],
-                    "line": {"color": "#FFFFFF", "width": 0.8},
-                },
+                line={"color": color, "width": 2.6},
+                marker={"color": color, "size": 7},
                 hovertemplate=(
                     "<b>%{customdata[0]}</b><br>%{customdata[1]}"
                     "<br>Année : %{x:.0f}<br>" + metric_label + "<extra></extra>"
                 ),
             )
         )
+        last = observed.iloc[-1]
+        label_text = country if metric == "score" else f"{country} · {int(last[metric])}"
+        figure.add_annotation(
+            x=int(last["year"]),
+            y=float(last[metric]),
+            text=label_text,
+            showarrow=False,
+            xanchor="left",
+            xshift=10,
+            yshift=end_shift,
+            font={"size": 12.5, "color": color},
+            bgcolor="rgba(255,255,255,0.85)",
+        )
+        if metric == "rank":
+            # Style bump chart : le rang de départ est écrit à gauche de la ligne.
+            first = observed.iloc[0]
+            figure.add_annotation(
+                x=int(first["year"]),
+                y=float(first[metric]),
+                text=f"{int(first[metric])}",
+                showarrow=False,
+                xanchor="right",
+                xshift=-10,
+                yshift=start_shift,
+                font={"size": 11.5, "color": color},
+                bgcolor="rgba(255,255,255,0.85)",
+            )
 
     apply_theme(figure)
-    first, last = int(series["year"].min()), int(series["year"].max())
+    first, last_year = int(series["year"].min()), int(series["year"].max())
+    # Rendre le manque visible (Séance 4) : une bande grise couvre chaque
+    # année sans aucune observation exploitable pour la mesure choisie.
+    missing_years = [
+        int(year)
+        for year in sorted(series["year"].unique())
+        if series.loc[series["year"].eq(year), metric].isna().all()
+    ]
+    for year in missing_years:
+        figure.add_vrect(
+            x0=year - 0.45,
+            x1=year + 0.45,
+            fillcolor="#EBEFF5",
+            opacity=0.7,
+            layer="below",
+            line_width=0,
+        )
+        figure.add_annotation(
+            x=year,
+            y=0.5,
+            yref="paper",
+            text=(
+                "aucun score<br>exploitable" if metric == "score"
+                else "aucun rang<br>exploitable"
+            ),
+            showarrow=False,
+            textangle=90,
+            font={"size": 10.5, "color": "#6B7A90"},
+        )
     figure.update_layout(
-        title_text=f"{title} — {first}–{last}",
+        title_text=f"{title} — {first}–{last_year}",
         height=460,
+        margin={"t": 100, "r": 150},
         hovermode="closest",
+        showlegend=False,
     )
     figure.update_xaxes(
         title_text="Année",
         type="linear",
-        range=[first - 0.3, last + 0.3],
+        range=[first - 0.3, last_year + 0.3],
         tickmode="linear",
         tick0=first,
-        dtick=max(1, ceil((last - first) / 12)),
+        dtick=max(1, ceil((last_year - first) / 12)),
         tickformat=".0f",
         showgrid=True,
     )
     if metric == "score":
         figure.update_yaxes(
-            title_text="Score (destinations)",
-            range=[0, _score_upper(series["score"])],
+            title_text="Destinations accessibles",
+            range=[low, high],
             rangemode="tozero",
             tickformat=".0f",
         )
     else:
-        maximum = max(value for value in values if value is not None)
-        upper = max(2, ceil(maximum + max(1, maximum * 0.05)))
         figure.update_yaxes(
-            title_text="Rang (1 = meilleur)",
-            range=[upper, 1],
+            title_text="Rang mondial (1 = meilleur)",
+            range=[low, high],
             autorange=False,
             tickmode="linear",
             tick0=1,
-            dtick=max(1, ceil((upper - 1) / 10)),
+            dtick=max(1, ceil((low - 1) / 10)),
             tickformat=".0f",
             rangemode="normal",
         )
     return figure
 
 
-def positions(
+def country_slopes(
     panel: pd.DataFrame, start: int, end: int, focus: list[str]
 ) -> go.Figure:
-    """Compare endpoint scores with identical units, bounds and physical axis scale."""
-    title = f"Position des passeports — {start} → {end}"
-    if panel.empty:
+    """Diagramme de pente : score de départ à gauche, score d'arrivée à droite.
+
+    Une ligne par passeport suivi, même couleur que dans les trajectoires.
+    Monter signifie un gain de destinations, descendre une perte.
+    """
+    title = f"D'où partent les pays suivis et où arrivent-ils ({start} → {end}) ?"
+    rows = panel.loc[panel["code"].isin(set(focus))] if not panel.empty else panel
+    if rows.empty:
         return _empty(title)
+    rows = rows.sort_values(["country", "code"], kind="stable")
+    upper = _score_upper(rows["score_start"], rows["score_end"])
+    # Deux arrivées très proches (Émirats 184, États-Unis 182) feraient se
+    # chevaucher les noms : les étiquettes d'extrémité sont écartées, l'ancre
+    # reste sur la vraie valeur (densité limitée, Séance 3 p. 33-35).
+    geometry = {"top": 100, "inner": 520 - 100 - 80, "low": 0.0, "high": upper}
+    start_shifts = _label_shifts([float(value) for value in rows["score_start"]], **geometry)
+    end_shifts = _label_shifts([float(value) for value in rows["score_end"]], **geometry)
 
     figure = go.Figure()
-    selected = set(focus)
-    upper = _score_upper(panel["score_start"], panel["score_end"])
-    for region in _region_keys(panel):
-        rows = panel.loc[panel["region"].eq(region)]
-        highlighted = rows["code"].isin(selected).tolist()
+    for index, (row, start_shift, end_shift) in enumerate(
+        zip(rows.itertuples(index=False), start_shifts, end_shifts)
+    ):
+        color = COUNTRY_COLORS[index % len(COUNTRY_COLORS)]
+        delta = int(row.delta)
+        endpoint = [
+            row.code,
+            row.country,
+            float(row.score_start),
+            float(row.score_end),
+            float(row.delta),
+            _label(row.region),
+        ]
         figure.add_trace(
             go.Scatter(
-                x=_numbers(rows["score_start"]),
-                y=_numbers(rows["score_end"]),
-                ids=rows["code"].tolist(),
-                customdata=_endpoint_data(rows),
-                mode="markers",
-                marker={
-                    "size": 10,
-                    "color": _color(region),
-                    "opacity": 0.85,
-                    "line": {
-                        "color": [TEXT_COLOR if flag else "#FFFFFF" for flag in highlighted],
-                        "width": [2.2 if flag else 0.7 for flag in highlighted],
-                    },
-                },
-                name=_label(region),
-                legendgroup=region,
+                x=[0, 1],
+                y=_numbers([row.score_start, row.score_end]),
+                ids=[f"{row.code}-start", f"{row.code}-end"],
+                customdata=[endpoint] * 2,
+                mode="lines+markers",
+                line={"color": color, "width": 2.8},
+                marker={"color": color, "size": 9},
+                name=str(row.country),
+                showlegend=False,
                 hovertemplate=_endpoint_hover(start, end),
             )
         )
-
-    labels = panel.loc[panel["code"].isin(selected)]
-    if not labels.empty:
-        figure.add_trace(
-            go.Scatter(
-                x=_numbers(labels["score_start"]),
-                y=_numbers(labels["score_end"]),
-                ids=labels["code"].tolist(),
-                mode="text",
-                text=labels["country"].tolist(),
-                textposition=[
-                    ("bottom" if row.score_end >= upper * 0.7 else "top")
-                    + (" left" if row.score_start > upper * 0.75 else " right")
-                    for row in labels.itertuples(index=False)
-                ],
-                textfont={
-                    "size": 12,
-                    "color": TEXT_COLOR,
-                    "shadow": "0 0 3px #FFFFFF, 0 0 3px #FFFFFF",
-                },
-                cliponaxis=False,
-                name="Pays sélectionnés",
-                showlegend=False,
-                hoverinfo="skip",
-            )
+        figure.add_annotation(
+            x=0,
+            y=float(row.score_start),
+            text=f"{int(row.score_start)}",
+            showarrow=False,
+            xanchor="right",
+            xshift=-10,
+            yshift=start_shift,
+            font={"size": 12.5, "color": TEXT_COLOR},
+        )
+        figure.add_annotation(
+            x=1,
+            y=float(row.score_end),
+            text=f"{row.country} · {int(row.score_end)}",
+            showarrow=False,
+            xanchor="left",
+            xshift=10,
+            yshift=end_shift,
+            font={"size": 12.5, "color": color},
+        )
+        # Variation absolue puis relative (Séance 4) : +30 destinations et +100 %
+        # ne disent pas la même chose, les deux sont donc écrites.
+        relative = (
+            f" · {delta / row.score_start * 100:+.0f} %" if row.score_start else ""
+        )
+        figure.add_annotation(
+            x=0.5,
+            xref="paper",
+            y=float((row.score_start + row.score_end) / 2),
+            text=f"{delta:+d}{relative}",
+            showarrow=False,
+            font={"size": 12, "color": GAIN_COLOR if delta >= 0 else LOSS_COLOR},
+            bgcolor="rgba(255,255,255,0.85)",
         )
 
     apply_theme(figure)
-    figure.update_layout(title_text=title, height=620, hovermode="closest")
+    figure.update_layout(
+        title_text=(
+            f"{title}<br><sup>Au milieu de chaque ligne : variation en destinations, "
+            "puis en pourcentage du score de départ</sup>"
+        ),
+        height=520,
+        margin={"l": 65, "r": 200, "t": 100},
+        hovermode="closest",
+    )
     figure.update_xaxes(
-        title_text=f"Score {start} (destinations)",
-        range=[0, upper],
-        constrain="domain",
-        dtick=20 if upper > 100 else 10,
-        tickformat=".0f",
+        tickmode="array",
+        tickvals=[0, 1],
+        ticktext=[str(start), str(end)],
+        range=[-0.30, 1.30],
+        showgrid=False,
     )
     figure.update_yaxes(
-        title_text=f"Score {end} (destinations)",
+        title_text="Destinations accessibles",
         range=[0, upper],
-        scaleanchor="x",
-        scaleratio=1,
-        constrain="domain",
-        dtick=20 if upper > 100 else 10,
+        dtick=25,
         tickformat=".0f",
-    )
-    figure.add_shape(
-        type="line",
-        x0=0,
-        y0=0,
-        x1=upper,
-        y1=upper,
-        xref="x",
-        yref="y",
-        layer="below",
-        line={"color": "#8491A5", "width": 1.3, "dash": "dot"},
-    )
-    figure.add_annotation(
-        x=upper * 0.72,
-        y=upper * 0.72,
-        xref="x",
-        yref="y",
-        text="Score inchangé (y = x)",
-        textangle=-45,
-        yshift=13,
-        showarrow=False,
-        font={"size": 12, "color": TEXT_COLOR},
-        bgcolor="rgba(255,255,255,0.88)",
     )
     return figure
 
@@ -411,105 +508,72 @@ def _change_title(deltas: list[float]) -> str:
         return "Reculs les plus marqués et les plus limités"
     if high == 0:
         return "Reculs et scores inchangés"
-    return "Variations les plus faibles et les plus fortes"
+    return "Gains les plus forts et variations les plus faibles"
 
 
 def changes(extreme_panel: pd.DataFrame, start: int, end: int) -> go.Figure:
-    """Show the supplied, non-overlapping extremes as signed bars based at zero."""
-    if extreme_panel.empty:
-        return _empty(f"Variations des scores — {start} → {end}")
+    """Barres horizontales autour de zéro : bleu = gain, orange = recul.
 
-    groups = ("Faibles variations", "Fortes variations")
-    present = set(extreme_panel["group"])
-    group_order = [group for group in groups if group in present] + sorted(
-        present.difference(groups)
+    Une seule vue triée par variation, valeurs écrites au bout des barres,
+    ligne de zéro explicite (les barres partent de zéro).
+    """
+    if extreme_panel.empty:
+        return _empty(f"Qui a le plus gagné, qui a le plus perdu ({start} → {end}) ?")
+
+    ordered = extreme_panel.sort_values(
+        ["delta", "country", "code"], ascending=[False, True, True], kind="stable"
     )
-    ordered_parts = []
-    headings = []
-    separators = []
-    cursor = 0
-    for group in group_order:
-        rows = extreme_panel.loc[extreme_panel["group"].eq(group)].sort_values(
-            ["delta", "country", "code"], kind="stable"
-        ).copy()
-        headings.append((cursor, group))
-        rows["_position"] = list(range(cursor + 1, cursor + len(rows) + 1))
-        ordered_parts.append(rows)
-        cursor += len(rows) + 2
-        separators.append(cursor - 0.5)
-    ordered = pd.concat(ordered_parts, ignore_index=True)
     deltas = [float(value) for value in ordered["delta"]]
-    maximum = max(abs(value) for value in deltas)
-    limit = max(1, ceil(maximum * 1.3))
+    low = min(0.0, min(deltas))
+    high = max(0.0, max(deltas))
+    span = max(high - low, 1.0)
+    limit_low = low - ceil(span * 0.18)
+    limit_high = high + ceil(span * 0.18)
     figure = go.Figure()
-    for region in _region_keys(ordered):
-        rows = ordered.loc[ordered["region"].eq(region)]
-        figure.add_trace(
-            go.Bar(
-                x=_numbers(rows["delta"]),
-                y=rows["_position"].tolist(),
-                ids=rows["code"].tolist(),
-                customdata=_endpoint_data(rows),
-                base=0,
-                orientation="h",
-                width=0.66,
-                marker={"color": _color(region)},
-                name=_label(region),
-                legendgroup=region,
-                text=[f"+{value:g}" if value > 0 else f"{value:g}" for value in rows["delta"]],
-                textposition="outside",
-                textfont={"size": 13, "color": TEXT_COLOR},
-                cliponaxis=False,
-                hovertemplate=_endpoint_hover(start, end),
-            )
+    figure.add_trace(
+        go.Bar(
+            x=deltas,
+            y=ordered["country"].tolist(),
+            ids=ordered["code"].tolist(),
+            customdata=_endpoint_data(ordered),
+            base=0,
+            orientation="h",
+            width=0.62,
+            marker={
+                "color": [GAIN_COLOR if value > 0 else LOSS_COLOR for value in deltas]
+            },
+            name="Variation",
+            showlegend=False,
+            text=[f"+{value:g}" if value > 0 else f"{value:g}" for value in deltas],
+            textposition="outside",
+            textfont={"size": 13, "color": TEXT_COLOR},
+            cliponaxis=False,
+            hovertemplate=_endpoint_hover(start, end),
         )
+    )
     apply_theme(figure)
     figure.update_layout(
         title_text=f"{_change_title(deltas)} — {start} → {end}",
-        height=max(370, len(ordered) * 35 + len(group_order) * 45 + 150),
-        barmode="overlay",
+        height=max(360, 38 * len(ordered) + 140),
+        margin={"t": 100, "b": 80},
         hovermode="closest",
     )
     figure.update_xaxes(
-        title_text=f"Variation du score entre {start} et {end} (destinations)",
-        range=[-limit, limit],
+        title_text=f"Variation du nombre de destinations, {start} → {end}",
+        range=[limit_low, limit_high],
         zeroline=True,
         zerolinecolor=TEXT_COLOR,
         zerolinewidth=1.5,
-        dtick=max(1, ceil(limit / 4)),
+        dtick=max(1, ceil(span / 5)),
         tickformat=".0f",
     )
     figure.update_yaxes(
-        type="linear",
-        range=[float(ordered["_position"].max()) + 0.65, -0.65],
-        autorange=False,
-        tickmode="array",
-        tickvals=ordered["_position"].tolist(),
-        ticktext=ordered["country"].tolist(),
+        type="category",
+        categoryorder="array",
+        categoryarray=ordered["country"].tolist(),
+        autorange="reversed",
         showgrid=False,
         ticks="",
+        title_text=None,
     )
-    for position, group in headings:
-        figure.add_annotation(
-            x=0,
-            y=position,
-            xref="paper",
-            yref="y",
-            xanchor="left",
-            text=f"<b>{group}</b>",
-            showarrow=False,
-            font={"size": 12, "color": TEXT_COLOR},
-        )
-    for position in separators[:-1]:
-        figure.add_shape(
-            type="line",
-            x0=0,
-            x1=1,
-            xref="paper",
-            y0=position,
-            y1=position,
-            yref="y",
-            layer="below",
-            line={"color": GRID_COLOR, "width": 1},
-        )
     return figure

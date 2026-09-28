@@ -27,6 +27,13 @@ TEXT_COLOR = "#17233B"
 GRID_COLOR = "#DCE3EC"
 FONT_FAMILY = "Segoe UI, sans-serif"
 
+# Une couleur par passeport suivi (échelle catégorielle du cours, daltonisme-safe).
+COUNTRY_COLORS = ("#0072B2", "#E69F00", "#009E73", "#CC79A7")
+# Échelle divergente du cours : bleu/orange plutôt que rouge/vert.
+GAIN_COLOR = "#0072B2"
+LOSS_COLOR = "#E69F00"
+START_DOT_COLOR = "#8491A5"
+
 
 def apply_theme(figure: go.Figure) -> go.Figure:
     """Style in place without global state or rewriting existing title markup."""

@@ -21,9 +21,9 @@ def main() -> None:
     last_ratio = f"{ratios['end']:.2f}".replace(".", ",")
     focus = ["SG", "AF", "AE", "US"]
     figures = [
-        charts.regional_distribution(panel, 2006, 2025, focus),
+        charts.regional_medians(panel, 2006, 2025),
         charts.trajectories(timeseries(rank, focus, 2006, 2025), "score"),
-        charts.positions(panel, 2006, 2025, focus),
+        charts.country_slopes(panel, 2006, 2025, focus),
         charts.changes(extremes(panel), 2006, 2025),
     ]
     fragments = [

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Support de présentation</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: #17233B; font-size: 9.5pt; line-height: 1.32; margin: 0; }
+  h1 { font-size: 18pt; color: #224878; margin: 0 0 2pt; letter-spacing: -0.02em; }
+  .sub { font-size: 9pt; color: #4A596D; margin: 0 0 12pt; }
+  h2 { font-size: 12.5pt; color: #224878; margin: 14pt 0 5pt; border-bottom: 1px solid #DCE3EC; padding-bottom: 3pt;
+       break-after: avoid; page-break-after: avoid; }
+  h3 { font-size: 10.5pt; margin: 11pt 0 3pt; color: #17233B;
+       break-after: avoid; page-break-after: avoid; }
+  h3 .tab { font-weight: 400; color: #4A596D; font-size: 9pt; }
+  p { margin: 4pt 0; }
+  ul { margin: 3pt 0 3pt 0; padding-left: 15pt; }
+  li { margin: 2pt 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.8pt; margin: 4pt 0; }
+  th, td { border: 1px solid #DCE3EC; padding: 4pt 5pt; vertical-align: top; text-align: left; }
+  th { background: #F3F6FA; }
+  .why { margin: 3pt 0; }
+  .why b { color: #224878; }
+  .note { font-size: 8pt; color: #4A596D; }
+  .q { font-weight: 700; }
+  code { background: #F3F6FA; padding: 0 3pt; border-radius: 2pt; font-size: 9pt; }
+  .two { columns: 2; column-gap: 14pt; }
+  .keep { break-inside: avoid; page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<h1>Passeports et inégalités de mobilité</h1>
+<p class="sub">Support de présentation · M2 MIAGE · Problématique, choix des graphiques et lecture des axes</p>
+
+<h2>1. La problématique</h2>
+<p class="q">Comment les inégalités d'accès international se sont-elles reconfigurées entre 2006 et 2025, selon les régions et les pays ?</p>
+<p>Le public visé est composé d'analystes en relations internationales, de journalistes de données et de décideurs publics : des lecteurs pressés, qui ne doivent pas avoir à apprendre un vocabulaire graphique pour comprendre la figure.</p>
+<p>Cette question se décompose en quatre tâches, et chaque tâche a sa vue. C'est la seule raison d'avoir quatre onglets : <b>une vue = une question</b>.</p>
+<table>
+  <tr><th style="width:42%">Question posée</th><th style="width:26%">Vue / onglet</th><th>Type de graphique</th></tr>
+  <tr><td>Où en est chaque région, de 2006 à 2025 ?</td><td>Niveaux par région</td><td>Deux points reliés (médianes)</td></tr>
+  <tr><td>Comment l'accès des passeports suivis a-t-il évolué ?</td><td>Trajectoires</td><td>Courbes annuelles</td></tr>
+  <tr><td>D'où partent les pays suivis et où arrivent-ils ?</td><td>Départs et arrivées</td><td>Diagramme de pente</td></tr>
+  <tr><td>Qui a le plus gagné, qui a le plus perdu ?</td><td>Gains et pertes</td><td>Barres autour de zéro</td></tr>
+</table>
+
+<h2>2. Le vocabulaire des axes (à dire avant de montrer)</h2>
+<table>
+  <tr><th style="width:26%">Terme</th><th>Signification exacte</th></tr>
+  <tr><td><b>Score</b><br><span class="note">« destinations accessibles »</span></td><td>Nombre de destinations ouvertes à un passeport. La méthode Henley additionne les entrées <b>sans visa</b>, <b>avec visa à l'arrivée</b> et <b>avec autorisation électronique (ETA)</b>. Les e-visas exigeant une approbation préalable sont exclus. C'est un <b>nombre</b>, pas une note.</td></tr>
+  <tr><td><b>Rang mondial</b></td><td><b>Position relative</b> du passeport par rapport aux autres, de 1 (meilleur) à ~100. Un rang dépend des autres passeports : il peut se dégrader même quand le score progresse. Score et rang sont deux unités différentes, jamais superposées sur un même axe.</td></tr>
+  <tr><td><b>n</b><br><span class="note">dans « Europe (n = 44) »</span></td><td><b>Nombre de passeports de cette région présents dans le panel comparé</b>, c'est-à-dire disposant d'un score exploitable <b>aux deux dates</b> (2006 et 2025). Ce n'est ni le nombre de pays de la région, ni une population : c'est l'effectif réellement utilisé pour calculer la médiane. Les deux dates utilisent le même effectif.</td></tr>
+  <tr><td><b>Panel comparé</b></td><td><b>183 passeports</b> ayant un score exploitable aux deux dates. 16 sont exclus, avec le motif indiqué dans l'application. Comparer un même groupe aux deux dates évite d'attribuer au temps un simple changement de composition.</td></tr>
+  <tr><td><b>Scores nuls</b></td><td><b>447 observations</b> à zéro (dont les années entières 2007 et 2009) sont traitées comme des <b>anomalies présumées</b> et écartées : la source ne les certifie pas comme des absences. <b>Aucun trou n'est interpolé.</b></td></tr>
+  <tr><td><b>Médiane</b></td><td>La valeur du milieu : la moitié des passeports au-dessus, la moitié en dessous. Elle décrit le niveau typique de la région, pas la moyenne.</td></tr>
+</table>
+
+<h2>3. Les quatre vues</h2>
+
+<div class="keep">
+<h3>Vue 1 · « Où en est chaque région, de 2006 à 2025 ? » <span class="tab">— onglet Niveaux par région</span></h3>
+<div class="why"><b>Pourquoi ce graphique.</b> La tâche est de comparer un niveau de départ et un niveau d'arrivée. Deux points reliés sur une échelle commune donnent la lecture la plus précise et la plus immédiate : on voit d'un coup l'œil le niveau et l'ampleur du mouvement, sans avoir à expliquer les moustaches d'une boîte à moustaches.</div>
+<div class="why"><b>Comment le lire.</b> Une ligne = une région. Le <b>point gris</b> est la médiane au départ, le <b>point coloré</b> la médiane à l'arrivée ; la couleur est celle de la région. Les deux valeurs sont écrites à côté des points, donc <b>aucun survol n'est nécessaire</b>. Une ligne qui monte vers la droite = la région a gagné des destinations.</div>
+<div class="why"><b>Les axes.</b>
+<ul>
+  <li><b>Axe horizontal</b> — « Destinations accessibles (médiane) » : le nombre de destinations, <b>échelle qui part de 0</b> et va jusqu'à ~200, graduée tous les 25. C'est un axe de <b>position</b> : plus le point est à droite, plus la région offre d'accès.</li>
+  <li><b>Axe vertical</b> — les <b>7 régions</b>, une par ligne, classées de la médiane d'arrivée la plus élevée (en haut) à la plus faible. Le libellé indique l'effectif : <code>Europe (n = 44)</code>.</li>
+</ul></div>
+<div class="why"><b>Ce que ça dit.</b> Toutes les régions progressent, mais les écarts persistent : Europe <b>108,5 → 183,5</b>, Caraïbes <b>62 → 147</b>, Amériques <b>82 → 139</b>, Afrique <b>35 → 59</b>. <span class="note">Contrepartie assumée : la dispersion à l'intérieur d'une région n'est pas dessinée. Elle reste consultable dans la table des quantiles (P10, P90).</span></div>
+</div>
+
+<div class="keep">
+<h3>Vue 2 · « Comment l'accès des passeports suivis a-t-il évolué ? » <span class="tab">— onglet Trajectoires</span></h3>
+<div class="why"><b>Pourquoi ce graphique.</b> Suivre une évolution dans le temps demande un axe temporel : c'est le rôle de la courbe. Pour rester simple, chaque pays n'a <b>qu'un seul encodage : sa couleur</b> ; son nom est écrit au bout de la ligne, ce qui supprime la légende à décoder. Le nombre de pays suivis est volontairement limité à <b>quatre</b> pour ne pas surcharger.</div>
+<div class="why"><b>Comment le lire.</b> Une courbe = un pays, nommé à son extrémité. Les <b>bandes grises</b> signalent les années sans aucun score exploitable : la ligne s'y interrompt, <b>rien n'est comblé</b> — un trou doit rester visible. Un menu bascule la mesure entre <b>score</b> et <b>rang</b>.</div>
+<div class="why"><b>Les axes.</b>
+<ul>
+  <li><b>Axe horizontal</b> — « Année », de 2006 à 2025, échelle <b>linéaire</b> et continue, une graduation par année (ou par deux ans quand la plage est longue).</li>
+  <li><b>Axe vertical en mode score</b> — « Destinations accessibles », de <b>0 au maximum observé</b>, gradué tous les 25. L'origine à 0 est volontaire.</li>
+  <li><b>Axe vertical en mode rang</b> — « Rang mondial (1 = meilleur) », <b>axe inversé</b> : le rang 1 est <b>en haut</b>. Plus la courbe est haute, meilleure est la position. Le rang de départ et le rang d'arrivée sont écrits aux deux extrémités.</li>
+</ul></div>
+<div class="why"><b>Ce que ça dit.</b> C'est la vue qui montre le mieux que <b>gain de destinations et gain de rang ne vont pas ensemble</b> : les États-Unis passent de 130 à 182 destinations (+52) mais du <b>rang 1 au rang 10</b>, tandis que Singapour passe de 122 à 193 et du rang 8 au rang 1. Un axe unique évite la superposition trompeuse de deux unités.</div>
+</div>
+
+<div class="keep">
+<h3>Vue 3 · « D'où partent les pays suivis et où arrivent-ils (2006 → 2025) ? » <span class="tab">— onglet Départs et arrivées</span></h3>
+<div class="why"><b>Pourquoi ce graphique.</b> Le diagramme de pente est la forme naturelle d'une comparaison <b>avant / après</b> : il montre d'où l'on part et où l'on arrive, et rend les croisements immédiatement lisibles (un pays qui dépasse un autre).</div>
+<div class="why"><b>Comment le lire.</b> Une ligne part du score de départ (à gauche) et rejoint le score d'arrivée (à droite). <b>Monter = gain</b> de destinations, <b>descendre = perte</b>. À gauche, le score de départ ; à droite, « Pays · score d'arrivée ». Au milieu de chaque ligne sont écrites <b>deux variations</b> : d'abord en destinations, puis la même en <b>pourcentage du score de départ</b>.</div>
+<div class="why"><b>Les axes.</b>
+<ul>
+  <li><b>Axe horizontal</b> — <b>deux positions seulement</b>, étiquetées « 2006 » et « 2025 ». Ce n'est <b>pas</b> une échelle continue : il n'y a que deux dates, la trajectoire intermédiaire se lit dans l'onglet Trajectoires.</li>
+  <li><b>Axe vertical</b> — « Destinations accessibles », même échelle que la vue 1 : de <b>0</b> au maximum, graduée tous les 25. La hauteur est donc directement comparable au graphique précédent.</li>
+</ul></div>
+<div class="why"><b>Ce que ça dit.</b> Les deux façons de mesurer ne classent pas les mêmes pays : les Émirats arabes unis font <b>+149 destinations (+426 %)</b>, tandis que l'Afghanistan fait <b>+13 destinations mais +108 %</b>. Un petit score progresse vite en pourcentage sans jamais rattraper les grands — d'où l'intérêt d'écrire les deux.</div>
+</div>
+
+<div class="keep">
+<h3>Vue 4 · « Qui a le plus gagné, qui a le plus perdu ? » <span class="tab">— onglet Gains et pertes</span></h3>
+<div class="why"><b>Pourquoi ce graphique.</b> Ici la tâche est de <b>classer des amplitudes</b> : la longueur d'une barre le fait mieux que tout. Les barres partent de zéro, condition nécessaire pour que les longueurs soient comparables. Le couple <b>bleu = gain / orange = recul</b> reste distinguable par les personnes daltoniennes.</div>
+<div class="why"><b>Comment le lire.</b> Une barre = un pays. Vers la <b>droite en bleu</b> : gain ; vers la <b>gauche en orange</b> : recul. La valeur signée est écrite au bout de la barre. La vue retient les <b>cinq plus fortes hausses</b> et les <b>cinq variations les plus faibles</b>, sans doublon.</div>
+<div class="why"><b>Les axes.</b>
+<ul>
+  <li><b>Axe horizontal</b> — « Variation du nombre de destinations, 2006 → 2025 » : une <b>différence en destinations</b> (et non un pourcentage), avec une <b>ligne de zéro explicite</b> au centre.</li>
+  <li><b>Axe vertical</b> — les <b>pays</b>, classés du plus grand gain (en haut) au plus grand recul (en bas).</li>
+</ul></div>
+<div class="why"><b>Ce que ça dit.</b> Émirats arabes unis <b>+149</b>, Ukraine <b>+115</b>, Albanie et Serbie <b>+106</b>, Roumanie <b>+104</b> ; à l'autre bout, Bolivie <b>−5</b> avec l'Afghanistan à <b>+13</b>. <b>Point de vigilance :</b> une progression faible reste un <b>gain</b>, pas un déclin — le titre le rappelle. Le Monténégro n'apparaît pas : son score initial nul rend la variation incalculable.</div>
+</div>
+
+<h2>4. Les chiffres à citer</h2>
+<ul>
+  <li><b>183</b> passeports comparables, <b>16</b> exclus, <b>447</b> scores nuls écartés.</li>
+  <li>Médianes 2006 → 2025 : Europe <b>108,5 → 183,5</b> · Caraïbes <b>62 → 147</b> · Afrique <b>35 → 59</b>.</li>
+  <li>Écart <b>P90–P10</b> : <b>105,6 → 140,0</b> destinations (écart absolu <b>en hausse</b>).</li>
+  <li>Rapport <b>P90/P10</b> : <b>6,56 → 3,98</b> (mesure relative <b>en baisse</b>).</li>
+  <li>Le cas qui résume tout : États-Unis <b>130 → 182</b> destinations, mais <b>rang 1 → 10</b>.</li>
+</ul>
+<p class="note">Ces deux dernières lignes sont le cœur du message : un écart absolu qui se creuse et un rapport relatif qui se resserre ne racontent pas la même histoire. Aucune des deux mesures ne résume « les inégalités » à elle seule.</p>
+
+<h2>5. Les limites à énoncer soi-même</h2>
+<ul>
+  <li>Le score ne mesure <b>pas la liberté réelle de voyager</b> : ni coûts, ni revenus, ni déplacements effectifs.</li>
+  <li>Le jeu de données <b>ne prouve aucune causalité</b> diplomatique, économique ou sanitaire.</li>
+  <li>Les <b>régions</b> sont le découpage du fournisseur ; chaque passeport pèse le même poids (aucune pondération par la population).</li>
+  <li>Les listes bilatérales de visas n'ont <b>pas de dimension temporelle</b> : elles ne servent qu'à la fiche d'un passeport, jamais à reconstituer un historique.</li>
+</ul>
+
+</body>
+</html>

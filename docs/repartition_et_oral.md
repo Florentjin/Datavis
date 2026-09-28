@@ -9,7 +9,7 @@ discuter les choix et pouvoir expliquer le code avant de remettre le projet.
 | Rôle | Responsabilité | À savoir défendre |
 |---|---|---|
 | A — Méthode | `data.py`, `metrics.py`, contrôle des données et résultats | Les 447 zéros, le code Namibie, la cohorte commune, les limites des sources. |
-| B — Comparaisons | Distributions et recompositions, lecture des écarts | Boxplot, médiane/quartiles, panel constant, géométrie du nuage et diagonale. |
+| B — Comparaisons | Niveaux par région et départs/arrivées, lecture des écarts | Médianes reliées (point de départ, point d'arrivée), panel constant, diagramme de pente, écart absolu contre écart relatif. |
 | C — Interaction | Streamlit, trajectoires et variations | Cohérence des filtres, score/rang, lacunes, zéro des barres et messages. |
 | D — Critique | Journal, sources, contre-lecture, support oral | Provenance réelle de l'IA, arbitrages conservés/modifiés/rejetés, charge cognitive. |
 
@@ -49,8 +49,10 @@ sélective autour d'un raisonnement, plutôt qu'un inventaire des boutons.
 ## Démonstration conseillée
 
 Commencer avec la comparaison 2006–2025 et toutes les régions. Montrer les
-effectifs et les distributions, puis le cas américain avec le sélecteur
-score/rang. Terminer par les variations et l'explication du Monténégro exclu.
+effectifs et les médianes régionales reliées, puis le cas américain avec le
+sélecteur score/rang (les années grisées et les rangs écrits aux extrémités
+se lisent d'elles-mêmes). Terminer par les variations et l'explication du
+Monténégro exclu.
 Les autres vues restent disponibles pour les questions. Ne pas chercher à
 montrer chaque interaction ni à justifier une cause non documentée.
 
@@ -64,10 +66,11 @@ hors ligne ; il n'a pas les filtres coordonnés de Streamlit.
 |---|---|
 | Pourquoi ne pas conserver les zéros ? | Leur structure est suspecte, notamment deux années entièrement nulles avec des rangs renseignés. Nous les signalons et les excluons par prudence, sans affirmer que la source a confirmé leur statut. |
 | Pourquoi 183 et non 199 ? | Il faut des scores exploitables aux deux dates. Les statistiques comparatives utilisent exactement le même panel. |
-| Pourquoi un boxplot ? | Pour lire la médiane et la dispersion intrarégionale, qu'une moyenne seule masque. |
-| Pourquoi deux graphiques sur les mêmes dates ? | Le nuage situe les variations selon le niveau initial ; les barres classent leur amplitude. Ce sont deux tâches différentes. |
+| Pourquoi des médianes reliées plutôt qu'un boxplot ? | La médiane reste l'indicateur, mais les deux valeurs sont écrites sur les points : la lecture est immédiate, sans expliquer des moustaches à un public non spécialisé. La dispersion reste consultable dans la table de quantiles. |
+| Pourquoi deux graphiques sur les mêmes dates ? | Le diagramme de pente montre d'où chaque pays part et où il arrive, avec l'écart en destinations et en pourcentage ; les barres classent l'amplitude des variations. Ce sont deux tâches différentes. |
 | Pourquoi pas une carte ? | La tâche est une comparaison quantitative précise ; l'aire des territoires n'apporte rien et détournerait l'attention. |
-| Pourquoi pas un bump chart comme vue principale ? | Un rang est relatif ; il peut masquer un gain réel de destinations. Nous proposons un basculement explicite, sans double axe. |
+| Pourquoi pas un bump chart comme vue principale ? | Un rang est relatif ; il peut masquer un gain réel de destinations. Le rang reste une bascule des trajectoires, où le style du bump chart est repris (rangs écrits aux deux extrémités, Séance 4 p. 21) sans devenir la vue d'ouverture. |
+| Pourquoi une heat map ? (Séance 4) | La source n'a qu'une granularité annuelle : il n'y a pas de seconde granularité à croiser, la heat map n'apporterait rien de lisible. |
 | L'indice mesure-t-il la liberté réelle de voyager ? | Non : il représente des règles d'accès pour des hypothèses de séjour précises, sans coûts, revenus ou voyages effectifs. |
 | Les événements politiques expliquent-ils les courbes ? | Pas avec ces seules données. Une annotation explicative exige d'autres sources et une formulation prudente. |
 | Qu'avez-vous réellement conservé de l'IA ? | Consulter le registre et la nouvelle proposition conservée ; distinguer ses décisions des erreurs visibles dans l'image historique. |
