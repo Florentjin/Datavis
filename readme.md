@@ -19,9 +19,20 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
-Ouvrir l'adresse locale indiquée, passer le navigateur en plein écran (F11) et naviguer avec le
-menu latéral ou les boutons « suivant » en bas de page. Les CSV doivent rester à côté de `app.py` ;
+Ouvrir l'adresse locale indiquée, passer le navigateur en plein écran (F11) et naviguer avec les
+flèches ← → en haut à droite (le menu latéral, replié par défaut, reste accessible). Les pages sont
+calibrées pour 1920×1080 ; sur un projecteur 1280×720, régler le zoom du navigateur à 67 % (Ctrl −). Les CSV doivent rester à côté de `app.py` ;
 aucune connexion Internet n'est nécessaire pendant la présentation.
+
+**Avec Docker** (aucune installation de Python nécessaire) :
+
+```powershell
+docker compose up -d --build      # puis ouvrir http://localhost:8501
+docker compose down               # arrêter
+```
+
+Si le port 8501 est déjà pris : `$env:PORT=8502; docker compose up -d` puis http://localhost:8502.
+Construire l'image demande Internet ; la faire **avant** la présentation, l'app tourne ensuite hors ligne.
 
 Environnement de référence : Python **3.14.6**, pandas **3.0.5**, Plotly **6.9.0**,
 Streamlit **1.64.0** (`requirements-lock.txt` pour les versions exactes).
@@ -34,7 +45,7 @@ deux parties de quatre questions, chacune avec un graphique et un message à ret
 | Partie | Question | Graphique |
 |---|---|---|
 | 1 · Qui peut voyager ? | Q1. Comment la puissance des passeports se répartit-elle entre régions ? | Points par passeport et médiane régionale |
-| | Q2. L'écart entre passeports forts et faibles s'est-il creusé depuis 2006 ? | Barres P10–P90 par année |
+| | Q2. L'écart entre passeports forts et faibles s'est-il creusé depuis 2006 ? | Barres P10–P90 par année et médiane |
 | | Q3. Quels passeports ont le plus progressé, lesquels ont stagné ou reculé ? | Barres des plus fortes et plus faibles variations |
 | | Q4. Selon sa région, à quelles formalités un voyageur fait-il face ? | Barres empilées par régime d'entrée |
 | 2 · Qui accueille, et à quelles conditions ? | Q5. Les ouvertures sont-elles réciproques ou à sens unique ? | Barres empilées de réciprocité et solde |
@@ -42,9 +53,25 @@ deux parties de quatre questions, chacune avec un graphique et un message à ret
 | | Q7. Les régions s'ouvrent-elles davantage à leurs voisins ? | Matrice région × région |
 | | Q8. Les grands blocs régionaux forment-ils des « clubs » de mobilité ? | Haltères « entre membres / vers l'extérieur » |
 
-Chaque page contient le graphique, un message « À retenir » calculé à partir des données,
-un guide « Comment lire », une limite et un tableau des données. Une page de synthèse
+Chaque page contient la question en en-tête, le graphique dont le **titre est la réponse** calculée
+à partir des données (dite une seule fois), un guide « Comment lire », une limite et un tableau des données. Une page de synthèse
 reprend les huit messages et la méthode.
+
+## Lisibilité en projection (appuyée sur le cours)
+
+- **Taille** : texte de 16 px minimum, valeurs clés à 19–23 px, titres à 28 px ; hauteur unique
+  (780 px) pour que question, contrôles et graphique tiennent dans un écran 1080 p sans défiler.
+- **Titre-message + sous-titre de lecture** (séance 3, réduire la charge cognitive) : la question
+  est posée en en-tête, la réponse est le titre ; le message n'est plus répété trois fois.
+- **Couleur intentionnelle** (séance 2) : gris pour le contexte, bleu pour ce dont on parle, orange
+  pour l'alerte (recul, minimum) ; palettes bleu/orange adaptées au daltonisme.
+- **Pas de double encodage inutile** (séance 3) : Q1 n'a plus 7 teintes de région (la ligne porte
+  déjà la région) ; Q2 n'a plus de lignes P10/P90 en plus des barres ; Q6 n'a plus de légende à 7 couleurs.
+- **Mémoire de travail 5 à 9 éléments** (séance 2) : Q3 affiche 5 pays par groupe par défaut, Q6 nomme 7 pays.
+- **Data-ink ratio** (séance 3) : grilles retirées quand les valeurs sont écrites ; barres à base zéro ;
+  années manquantes signalées « n.d. » et jamais reliées.
+- Q2 met en avant la première et la dernière année : comparaison avant/après (séance 4).
+- 	ests\test_charts.py vérifie la taille minimale du texte et la hauteur de chaque graphique.
 
 ## Décisions méthodologiques importantes
 

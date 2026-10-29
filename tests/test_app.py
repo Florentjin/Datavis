@@ -34,6 +34,12 @@ def test_next_button_moves_forward():
     assert app.session_state["page"] == "q2"
 
 
+def test_top_arrows_navigate_without_scrolling():
+    app = run_page("q2")
+    next(button for button in app.button if button.key == "top_prev_q2").click().run()
+    assert app.session_state["page"] == "q1"
+
+
 def test_invalid_period_warns_instead_of_crashing():
     app = run_page("q3")
     app.selectbox(key="q3_start").set_value(2024)

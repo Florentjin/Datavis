@@ -48,7 +48,8 @@ QUESTIONS = (
         "L'écart entre passeports forts et faibles s'est-il creusé depuis 2006 ?",
         "Évolution des inégalités",
         "Chaque barre bleue va du 10e centile (P10, les passeports faibles) au 90e centile (P90, les "
-        "forts) ; la ligne noire suit la médiane. Une barre plus longue signifie un écart plus grand.",
+        "forts) ; la ligne noire suit la médiane. Une barre plus longue signifie un écart plus grand. "
+        "Les barres foncées comparent la première et la dernière année.",
         "Panel constant des passeports mesurés chaque année ; 2007 et 2009 sont absentes de la source. "
         "L'écart absolu grandit mais le rapport P90/P10 diminue : les faibles progressent aussi.",
     ),
@@ -81,7 +82,8 @@ QUESTIONS = (
         "Les pays qui accueillent le plus ont-ils aussi les passeports les plus puissants ?",
         "Accueillir ou voyager",
         "Horizontal : passeports étrangers accueillis sans démarche. Vertical : destinations ouvertes "
-        "à son propre passeport. Les pointillés (médianes) découpent quatre profils.",
+        "à son propre passeport. Les pointillés (médianes) découpent quatre profils ; les points bleus "
+        "sont les pays commentés, les gris servent de contexte.",
         "Une corrélation faible n'exclut pas des logiques régionales : il ne s'agit pas d'un lien causal.",
     ),
     Question(
@@ -130,7 +132,7 @@ def default_figures(rank: pd.DataFrame, access: pd.DataFrame) -> dict[str, tuple
     return {
         "q1": (charts.regional_distribution(scores, latest), story.q1(scores, latest)),
         "q2": (charts.inequality_trend(series), story.q2(series)),
-        "q3": (charts.biggest_changes(metrics.extremes(changes, 10), changes, first, latest),
+        "q3": (charts.biggest_changes(metrics.extremes(changes, 5), changes, first, latest),
                story.q3(changes, first, latest)),
         "q4": (charts.entry_modes(modes), story.q4(modes, "origin")),
         "q5": (charts.reciprocity(mutual), story.q5(mutual)),

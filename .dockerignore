@@ -1,0 +1,12 @@
+.git
+.venv
+.pytest_cache
+**/__pycache__
+docs
+livrables
+tests
+*.pdf
+*.jpeg
+*.txt
+!requirements.txt
+!requirements-lock.txt

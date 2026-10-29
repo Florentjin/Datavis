@@ -4,7 +4,7 @@ import pytest
 
 from passport_dashboard.data import load_access, load_rank
 from passport_dashboard.questions import QUESTIONS, default_figures
-from passport_dashboard.theme import REGIME_LABELS, STATIC_CONFIG
+from passport_dashboard.theme import FIGURE_HEIGHT, MIN_TEXT_SIZE, REGIME_LABELS, STATIC_CONFIG, TITLE_LINE_PX
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -45,4 +45,23 @@ def test_entry_modes_go_from_open_to_closed(figures):
 def test_titles_fit_in_margin(figures):
     for figure, _ in figures.values():
         lines = figure.layout.title.text.count("<br>") + 1
-        assert figure.layout.margin.t >= 14 + lines * 27
+        assert figure.layout.margin.t >= 14 + lines * TITLE_LINE_PX
+
+
+def _sizes(figure):
+    for annotation in figure.layout.annotations:
+        if annotation.font and annotation.font.size:
+            yield annotation.font.size
+    for trace in figure.data:
+        font = getattr(trace, "textfont", None)
+        if font is not None and font.size:
+            yield font.size
+    for axis in (figure.layout.xaxis, figure.layout.yaxis):
+        yield axis.tickfont.size
+
+
+@pytest.mark.parametrize("key", [question.key for question in QUESTIONS])
+def test_text_is_large_enough_for_a_projector(figures, key):
+    figure, _ = figures[key]
+    assert min(_sizes(figure)) >= MIN_TEXT_SIZE
+    assert figure.layout.height == FIGURE_HEIGHT

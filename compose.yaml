@@ -1,0 +1,7 @@
+services:
+  dashboard:
+    build: .
+    image: datavis-passeports
+    ports:
+      - "${PORT:-8501}:8501"
+    restart: unless-stopped

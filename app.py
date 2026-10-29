@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from passport_dashboard import charts, metrics, story
+from passport_dashboard import charts, metrics
 from passport_dashboard.data import DataError, access_audit, load_access, load_rank
 from passport_dashboard.questions import AUDIENCE, METHOD_NOTES, PARTS, PROBLEM, QUESTIONS, default_figures
 from passport_dashboard.theme import RECIPROCITY_LABELS, REGIME_LABELS, REGION_LABELS, STATIC_CONFIG
@@ -17,18 +17,25 @@ from passport_dashboard.theme import RECIPROCITY_LABELS, REGIME_LABELS, REGION_L
 ROOT = Path(__file__).resolve().parent
 PAGES = ["accueil", *(question.key for question in QUESTIONS), "synthese"]
 BY_KEY = {question.key: question for question in QUESTIONS}
-DEFAULT_START, DEFAULT_END, DEFAULT_N = 2006, 2025, 10
+# 5 pays par groupe : 10 barres au total, dans la limite de la mémoire de travail (5 à 9 éléments).
+DEFAULT_START, DEFAULT_END, DEFAULT_N = 2006, 2025, 5
 
-st.set_page_config(page_title="Passeports · Hiérarchie de la mobilité", page_icon="🌐", layout="wide")
+# Barre latérale repliée : le graphique occupe toute la largeur de l'écran projeté.
+st.set_page_config(page_title="Passeports · Hiérarchie de la mobilité", page_icon="🌐", layout="wide",
+                   initial_sidebar_state="collapsed")
 st.markdown(
     """
     <style>
-    .stMainBlockContainer { max-width: 1500px; padding: 1.5rem 2rem 2rem; }
+    .stMainBlockContainer { max-width: 1800px; padding: 2.4rem 2rem 2rem; }
+    [data-testid="stToolbar"] { display: none; }
     h1, h2, h3 { font-family: "Segoe UI", Arial, sans-serif; letter-spacing: -0.01em; }
-    .eyebrow { color: #2166AC; font-weight: 700; letter-spacing: 0.1em; font-size: 0.85rem;
-               text-transform: uppercase; margin-bottom: 0.2rem; }
+    .stMainBlockContainer p, .stMainBlockContainer li { font-size: 1.2rem; }
+    .stMainBlockContainer h2 { font-size: 2.3rem; padding: 0.1rem 0 0.3rem; }
+    [data-testid="stWidgetLabel"] p { font-size: 1.05rem; }
+    .eyebrow { color: #2166AC; font-weight: 700; letter-spacing: 0.1em; font-size: 1rem;
+               text-transform: uppercase; margin-bottom: 0; }
     .takeaway { border-left: 6px solid #2166AC; background: #F1F6FB; padding: 0.8rem 1rem;
-                font-size: 1.15rem; border-radius: 4px; margin: 0.4rem 0 0.8rem; }
+                font-size: 1.4rem; border-radius: 4px; margin: 0.4rem 0 0.8rem; }
     [data-testid="stMetricValue"] { font-variant-numeric: tabular-nums; }
     </style>
     """,
@@ -95,15 +102,21 @@ def sidebar() -> str:
 
 # Mise en page commune -----------------------------------------------------------
 def question_header(key: str) -> None:
+    """La question en en-tête ; la réponse est le titre du graphique (dite une seule fois)."""
     question = BY_KEY[key]
-    st.markdown(f"<div class='eyebrow'>{PARTS[question.part]} · question {question.number}/8</div>",
-                unsafe_allow_html=True)
-    st.header(question.question)
+    text, previous, following = st.columns([14, 1, 1], vertical_alignment="center")
+    text.markdown(f"<div class='eyebrow'>{PARTS[question.part]} · question {question.number}/8</div>",
+                  unsafe_allow_html=True)
+    text.header(question.question, anchor=False)
+    index = PAGES.index(key)
+    previous.button("←", on_click=go_to, args=(PAGES[index - 1],), key=f"top_prev_{key}",
+                    help=page_label(PAGES[index - 1]), width="stretch")
+    following.button("→", on_click=go_to, args=(PAGES[index + 1],), key=f"top_next_{key}",
+                     help=page_label(PAGES[index + 1]), type="primary", width="stretch")
 
 
-def question_footer(key: str, message: str, table: pd.DataFrame) -> None:
+def question_footer(key: str, table: pd.DataFrame) -> None:
     question = BY_KEY[key]
-    st.markdown(f"<div class='takeaway'><b>À retenir.</b> {message}</div>", unsafe_allow_html=True)
     reading, limit = st.columns(2)
     reading.markdown(f"**Comment lire.** {question.how_to_read}")
     limit.markdown(f"**Limite.** {question.limit}")
@@ -153,7 +166,7 @@ def q1(rank: pd.DataFrame, access: pd.DataFrame) -> None:
     show(charts.regional_distribution(scores, year))
     table = labelled(scores.sort_values("score", ascending=False),
                      {"country": "Pays", "region": "Région", "score": "Destinations"})
-    question_footer("q1", story.q1(scores, year), table)
+    question_footer("q1", table)
 
 
 def q2(rank: pd.DataFrame, access: pd.DataFrame) -> None:
@@ -162,7 +175,7 @@ def q2(rank: pd.DataFrame, access: pd.DataFrame) -> None:
     show(charts.inequality_trend(series))
     table = series.rename(columns={"year": "Année", "n": "Passeports", "p10": "P10", "median": "Médiane",
                                    "p90": "P90", "gap": "Écart P90 − P10"}).round(1)
-    question_footer("q2", story.q2(series), table)
+    question_footer("q2", table)
 
 
 def q3(rank: pd.DataFrame, access: pd.DataFrame) -> None:
@@ -181,7 +194,7 @@ def q3(rank: pd.DataFrame, access: pd.DataFrame) -> None:
     table = labelled(changes.sort_values("delta", ascending=False), {
         "country": "Pays", "region": "Région", "score_start": f"Score {start}",
         "score_end": f"Score {end}", "delta": "Variation"})
-    question_footer("q3", story.q3(changes, start, end), table)
+    question_footer("q3", table)
 
 
 def q4(rank: pd.DataFrame, access: pd.DataFrame) -> None:
@@ -191,7 +204,7 @@ def q4(rank: pd.DataFrame, access: pd.DataFrame) -> None:
     shares = metrics.entry_modes(access, rank, perspective)
     show(charts.entry_modes(shares, perspective))
     table = labelled(shares, {"region": "Région", **REGIME_LABELS, "open": "Sans démarche préalable"})
-    question_footer("q4", story.q4(shares, perspective), table)
+    question_footer("q4", table)
 
 
 def q5(rank: pd.DataFrame, access: pd.DataFrame) -> None:
@@ -200,7 +213,7 @@ def q5(rank: pd.DataFrame, access: pd.DataFrame) -> None:
     show(charts.reciprocity(shares))
     table = labelled(shares, {"region": "Région", **RECIPROCITY_LABELS, "balance": "Solde (pts)",
                               "pairs": "Relations"})
-    question_footer("q5", story.q5(shares), table)
+    question_footer("q5", table)
 
 
 def q6(rank: pd.DataFrame, access: pd.DataFrame) -> None:
@@ -213,7 +226,7 @@ def q6(rank: pd.DataFrame, access: pd.DataFrame) -> None:
     table = labelled(frame.sort_values("welcomed", ascending=False), {
         "country": "Pays", "region": "Région", "welcomed": "Passeports accueillis (sur 198)",
         "score": "Destinations de son passeport"})
-    question_footer("q6", story.q6(frame), table)
+    question_footer("q6", table)
 
 
 def q7(rank: pd.DataFrame, access: pd.DataFrame) -> None:
@@ -222,7 +235,7 @@ def q7(rank: pd.DataFrame, access: pd.DataFrame) -> None:
     show(charts.regional_openness(matrix))
     table = matrix.rename(index=REGION_LABELS, columns=REGION_LABELS).round(1)
     table = table.rename_axis("Passeport \\ destination").reset_index()
-    question_footer("q7", story.q7(matrix), table)
+    question_footer("q7", table)
 
 
 def q8(rank: pd.DataFrame, access: pd.DataFrame) -> None:
@@ -233,7 +246,7 @@ def q8(rank: pd.DataFrame, access: pd.DataFrame) -> None:
     table = clubs.rename(columns={"club": "Organisation", "members": "Membres présents", "missing": "Absents des données",
                                   "inside": "Entre membres (%)", "outside": "Vers non-membres (%)",
                                   "gap": "Écart (pts)"}).round(1)
-    question_footer("q8", story.q8(clubs), table)
+    question_footer("q8", table)
     with st.expander("Composition des clubs utilisée"):
         names = metrics.catalog(rank).set_index("code")["country"]
         for club, members in metrics.CLUBS.items():

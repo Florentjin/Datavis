@@ -56,12 +56,25 @@ RECIPROCITY_COLORS = {
 }
 
 TEXT_COLOR = "#17233B"
-MUTED_COLOR = "#5B6578"
-GRID_COLOR = "#E3E8EF"
+MUTED_COLOR = "#4A5568"
+GRID_COLOR = "#EDF1F5"
+CONTEXT_COLOR = "#B8C2CE"
+HIGHLIGHT_COLOR = "#2166AC"
 ACCENT_COLOR = "#B35806"
 FONT_FAMILY = "Segoe UI, Arial, sans-serif"
-BASE_FONT_SIZE = 16
-TITLE_LINE_PX = 27
+
+# Typographie pour un vidéoprojecteur : rien sous 16 px, valeurs clés à 18 px et plus.
+BASE_FONT_SIZE = 20
+TITLE_SIZE = 28
+SUBTITLE_SIZE = 19
+TICK_SIZE = 19
+LABEL_SIZE = 19
+NOTE_SIZE = 17
+MIN_TEXT_SIZE = 16
+TITLE_LINE_PX = 36
+LEGEND_PX = 46
+# Hauteur unique : graphique + question + contrôles tiennent dans un écran 1920×1080.
+FIGURE_HEIGHT = 780
 
 # Graphiques figés : pas de zoom accidentel ni d'information réservée au survol.
 STATIC_CONFIG = {"staticPlot": True, "displayModeBar": False, "responsive": True}
@@ -69,36 +82,40 @@ STATIC_CONFIG = {"staticPlot": True, "displayModeBar": False, "responsive": True
 
 def title_text(message: str, subtitle: str) -> str:
     """Titre-message en gras et sous-titre de lecture, coupés pour tenir à l'écran."""
-    head = "<br>".join(textwrap.wrap(message, 78))
-    sub = "<br>".join(textwrap.wrap(subtitle, 120))
-    return f"<b>{head}</b><br><span style='font-size:15px;color:{MUTED_COLOR}'>{sub}</span>"
+    head = "<br>".join(textwrap.wrap(message, 92))
+    sub = "<br>".join(textwrap.wrap(subtitle, 140))
+    return f"<b>{head}</b><br><span style='font-size:{SUBTITLE_SIZE}px;color:{MUTED_COLOR}'>{sub}</span>"
 
 
-def apply_theme(figure: go.Figure, *, height: int = 620) -> go.Figure:
-    """Applique la charte sans écraser les marges choisies par le graphique.
+def title_lines(figure: go.Figure) -> int:
+    return (figure.layout.title.text or "").count("<br>") + 1
 
-    La marge haute grandit avec le nombre de lignes du titre pour qu'il ne
-    chevauche jamais la légende ni la zone de tracé.
+
+def apply_theme(figure: go.Figure, *, height: int = FIGURE_HEIGHT, legend: bool = False,
+                top_extra: int = 0) -> go.Figure:
+    """Applique la charte sans écraser les marges latérales choisies par le graphique.
+
+    La hauteur totale est fixe ; la marge haute est calculée à partir du nombre de
+    lignes du titre (et de la légende) pour qu'ils ne chevauchent jamais le tracé.
     """
-    margin = {"l": 20, "r": 30, "t": 110, "b": 60}
+    margin = {"l": 20, "r": 30, "b": 70}
     current = figure.layout.margin
     margin.update({side: getattr(current, side) for side in margin if getattr(current, side) is not None})
-    lines = (figure.layout.title.text or "").count("<br>") + 1
-    extra = TITLE_LINE_PX * max(0, lines - 2)
-    margin["t"] += extra
-    total = height + extra
+    lines = title_lines(figure)
+    margin["t"] = 40 + lines * TITLE_LINE_PX + (LEGEND_PX if legend else 0) + top_extra
     # Plotly centre les titres multilignes : on fixe donc leur centre en pixels.
-    center = 14 + lines * TITLE_LINE_PX / 2
+    center = 12 + lines * TITLE_LINE_PX / 2
     figure.update_layout(
         template="plotly_white",
-        height=total,
+        height=height,
         paper_bgcolor="#FFFFFF",
         plot_bgcolor="#FFFFFF",
         font={"family": FONT_FAMILY, "size": BASE_FONT_SIZE, "color": TEXT_COLOR},
-        title={"x": 0.01, "xanchor": "left", "y": 1 - center / total, "yref": "container",
-               "yanchor": "middle", "font": {"size": 21}},
+        title={"x": 0.01, "xanchor": "left", "y": 1 - center / height, "yref": "container",
+               "yanchor": "middle", "font": {"size": TITLE_SIZE}},
         margin=margin,
         hovermode=False,
+        showlegend=legend,
         legend={
             "title": {"text": ""},
             "orientation": "h",
@@ -106,17 +123,14 @@ def apply_theme(figure: go.Figure, *, height: int = 620) -> go.Figure:
             "y": 1.0,
             "xanchor": "left",
             "yanchor": "bottom",
-            "font": {"size": 15},
+            "font": {"size": LABEL_SIZE},
             "bgcolor": "rgba(255,255,255,0)",
             "traceorder": "normal",
+            "itemwidth": 40,
         },
     )
-    figure.update_xaxes(
-        gridcolor=GRID_COLOR, zeroline=False, showline=False, automargin=True,
-        tickfont={"size": 15}, title_font={"size": 16},
-    )
-    figure.update_yaxes(
-        gridcolor=GRID_COLOR, zeroline=False, showline=False, automargin=True,
-        tickfont={"size": 15}, title_font={"size": 16},
-    )
+    axis = {"gridcolor": GRID_COLOR, "zeroline": False, "showline": False, "automargin": True,
+            "tickfont": {"size": TICK_SIZE, "color": MUTED_COLOR}, "title_font": {"size": TICK_SIZE, "color": MUTED_COLOR}}
+    figure.update_xaxes(**axis)
+    figure.update_yaxes(**axis)
     return figure
