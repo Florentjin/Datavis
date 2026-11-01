@@ -24,7 +24,7 @@ def test_journal_preserves_the_actual_new_prompt():
 
 
 def test_final_journal_has_three_pages_and_real_embedded_figures():
-    with pymupdf.open(ROOT / "livrables" / "journal_de_bord_v1.pdf") as document:
+    with pymupdf.open(ROOT / "livrables" / "journal_de_bord.pdf") as document:
         assert len(document) == 3
         assert "1. Prompt initial et contexte" in document[0].get_text()
         assert "2. Proposition brute" in document[1].get_text()

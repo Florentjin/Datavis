@@ -2,7 +2,7 @@
 
 ## Sujet retenu
 
-Le groupe a confirmé le sujet « Inégalités de mobilité internationale :
+Le groupe (Raphaël, Florent, Mao, Capucine) a confirmé le sujet « Inégalités de mobilité internationale :
 évolution de la puissance des passeports entre 2006 et 2025, selon les régions
 et les pays ». Il comprend quatre membres et a choisi Python, puis
 Streamlit + Plotly pour l'application.
@@ -17,17 +17,21 @@ La problématique initialement formulée dans ce contexte était :
 > Comment l'écart de puissance et d'accès des passeports s'est-il creusé ou
 > reconfiguré à l'échelle régionale et nationale entre 2006 et 2025 ?
 
-La formulation finale retire le présupposé du creusement :
+La formulation finale retire le présupposé du creusement et organise
+l'application en deux questions analytiques de quatre vues chacune :
 
-> Comment les inégalités d'accès international associées aux passeports ont-elles
-> évolué et se sont-elles reconfigurées entre 2006 et 2025, selon les régions et
-> les pays, en distinguant le nombre de destinations accessibles du classement
-> relatif ?
+> Le régime mondial des visas organise-t-il une hiérarchie durable de la
+> mobilité : qui peut circuler, qui accueille, et selon quelles réciprocités ?
+
+1. *Qui peut voyager ?* — Q1 à Q4, scores 2006–2025 (`rank_by_year.csv`).
+2. *Qui accueille, et à quelles conditions ?* — Q5 à Q8, listes 2025
+   (`country_lists.csv`).
 
 ## Ce qui existait réellement
 
 Le dossier contenait deux CSV, leur documentation TidyTuesday, l'énoncé et une
-image WhatsApp de quatre graphiques. Aucun code, notebook, journal de bord ni
+image WhatsApp de quatre graphiques (conservée sous
+`livrables/captures/trace_historique.jpg`). Aucun code, notebook, journal de bord ni
 historique de prompts n'était présent. Le groupe a indiqué que seule l'image
 avait été conservée.
 
@@ -46,11 +50,11 @@ Cette nouvelle proposition n'a pas reçu l'instruction d'introduire des erreurs.
 L'audit distingue les problèmes de l'image historique des choix réellement
 présents dans cette proposition. Une bonne décision de l'IA peut être conservée.
 
-Le produit final Streamlit, ses modules et ses exports forment une itération
-distincte. Les arbitrages sont documentés dans [audit_ia.md](audit_ia.md).
-Le groupe doit discuter leur pertinence et compléter les références au cours ;
-aucune discussion, validation humaine ou répartition effectivement exécutée
-n'est fabriquée dans les documents.
+Le produit final Streamlit (huit questions) forme une itération distincte.
+Une seconde itération assistée par IA (GitHub Copilot) a porté sur la
+lisibilité en projection, à partir des supports du cours. Les arbitrages des
+deux itérations, avec les références aux séances, sont documentés dans
+[audit_ia.md](audit_ia.md) et résumés dans le journal de bord.
 
 ## Sources de méthode
 

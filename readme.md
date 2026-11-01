@@ -96,10 +96,15 @@ reprend les huit messages et la méthode.
 - `passport_dashboard\` : `data.py` (chargement et contrôles), `metrics.py` (calculs des 8 questions),
   `charts.py` (graphiques), `story.py` (messages calculés), `questions.py` (textes du récit),
   `theme.py` (charte de projection, palettes adaptées au daltonisme).
-- `prototype_ia.py`, `docs\` et `livrables\` : itération IA, audit, journal de bord et préparation de l'oral.
-  **À mettre à jour par le groupe** : ces documents décrivent encore l'ancienne version de l'application.
+- `livrables\journal_de_bord.pdf` : **journal de bord (3 pages)**, généré depuis `docs\journal_de_bord.md` par
+  `.\.venv\Scripts\python.exe docs\build_journal.py` (nécessite Edge ou Chrome).
+- `docs\audit_ia.md` : registre complet des arbitrages (données, encodages, IA) avec références aux séances.
+- `docs\repartition_et_oral.md` : répartition des rôles, déroulé de l'oral (≈ 7 min) et questions à préparer.
+- `docs\prompt_iteration_01.md`, `docs\reponse_iteration_01.md`, `prototype_ia.py`,
+  `livrables\proposition_ia.html` : proposition brute de l'IA, archivée sans retouche.
+- `livrables\captures\` : capture de la proposition IA et rendus finaux `final_q1.png` à `final_q8.png`
+  (secours pour l'oral) ; `v1_ancienne_version\` archive la première version de l'application.
 
-Les documents rédigés avec l'IA doivent être relus et appropriés par le groupe.
 Le journal demandé fait 2 à 3 pages ; l'oral, 6 à 8 minutes.
 
 ## Contrôles

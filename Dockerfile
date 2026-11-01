@@ -8,7 +8,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY requirements.txt requirements-lock.txt ./
-RUN pip install -r requirements.txt -c requirements-lock.txt
+# --trusted-host : le proxy du réseau d'entreprise intercepte SSL.
+RUN pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org \
+    -r requirements.txt -c requirements-lock.txt
 
 COPY .streamlit ./.streamlit
 COPY passport_dashboard ./passport_dashboard

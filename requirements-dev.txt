@@ -1,3 +1,4 @@
 -r requirements.txt
 pytest>=8.4,<10
 PyMuPDF>=1.26,<2
+markdown>=3.5,<4
