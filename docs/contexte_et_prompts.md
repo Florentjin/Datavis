@@ -20,7 +20,7 @@ La problématique initialement formulée dans ce contexte était :
 La formulation finale retire le présupposé du creusement et organise
 l'application en deux questions analytiques de quatre vues chacune :
 
-> Le régime mondial des visas organise-t-il une hiérarchie durable de la
+> Le régime mondial des visas organise-t-il une hiérarchie de la
 > mobilité : qui peut circuler, qui accueille, et selon quelles réciprocités ?
 
 1. *Qui peut voyager ?* — Q1 à Q4, scores 2006–2025 (`rank_by_year.csv`).

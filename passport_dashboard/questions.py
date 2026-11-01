@@ -11,7 +11,7 @@ import pandas as pd
 from passport_dashboard import charts, metrics, story
 
 PROBLEM = (
-    "Le régime mondial des visas organise-t-il une hiérarchie durable de la mobilité : "
+    "Le régime mondial des visas organise-t-il une hiérarchie de la mobilité : "
     "qui peut circuler, qui accueille, et selon quelles réciprocités ?"
 )
 AUDIENCE = "Analystes, journalistes et décideurs publics intéressés par les inégalités de mobilité."
@@ -29,8 +29,6 @@ class Question:
     number: int
     question: str
     short: str
-    how_to_read: str
-    limit: str
 
 
 QUESTIONS = (
@@ -38,70 +36,41 @@ QUESTIONS = (
         "q1", 1, 1,
         "Comment la puissance des passeports se répartit-elle entre les régions du monde ?",
         "Répartition régionale",
-        "Chaque point est un passeport. Plus il est à droite, plus il ouvre de destinations sans "
-        "démarche préalable. Le trait noir marque la médiane de la région ; les noms désignent "
-        "le passeport le plus faible et le plus fort.",
-        "Le score compte des destinations, sans pondérer leur intérêt (population, économie).",
     ),
     Question(
         "q2", 1, 2,
         "L'écart entre passeports forts et faibles s'est-il creusé depuis 2006 ?",
         "Évolution des inégalités",
-        "Chaque barre bleue va du 10e centile (P10, les passeports faibles) au 90e centile (P90, les "
-        "forts) ; la ligne noire suit la médiane. Une barre plus longue signifie un écart plus grand. "
-        "Les barres foncées comparent la première et la dernière année.",
-        "Panel constant des passeports mesurés chaque année ; 2007 et 2009 sont absentes de la source. "
-        "L'écart absolu grandit mais le rapport P90/P10 diminue : les faibles progressent aussi.",
     ),
     Question(
         "q3", 1, 3,
         "Quels passeports ont le plus progressé, et lesquels ont stagné ou reculé ?",
         "Gagnants et perdants",
-        "Longueur de la barre : destinations gagnées entre les deux années. En haut les plus fortes "
-        "progressions, en bas les plus faibles.",
-        "Une forte progression part souvent d'un score bas : comparer aussi les scores de départ.",
     ),
     Question(
         "q4", 1, 4,
         "Selon sa région, à quelles formalités un voyageur fait-il face ?",
         "Formalités d'entrée",
-        "Chaque barre fait 100 % des relations de la région. Les bleus n'exigent aucune démarche "
-        "préalable, les orangés imposent un visa électronique ou classique. À droite : total des bleus.",
-        "Photographie 2025 : la source ne donne pas l'historique des régimes.",
     ),
     Question(
         "q5", 2, 5,
         "Les ouvertures sont-elles réciproques ou à sens unique ?",
         "Réciprocité",
-        "Pour chaque pays et chaque partenaire : les deux s'ouvrent (bleu foncé), seul mon passeport "
-        "entre (bleu clair), seul le sien entre (orange) ou aucun (gris). Le solde compare bleu clair et orange.",
-        "Seules les relations renseignées dans les deux sens entre les 199 pays sont comptées.",
     ),
     Question(
         "q6", 2, 6,
         "Les pays qui accueillent le plus ont-ils aussi les passeports les plus puissants ?",
         "Accueillir ou voyager",
-        "Horizontal : passeports étrangers accueillis sans démarche. Vertical : destinations ouvertes "
-        "à son propre passeport. Les pointillés (médianes) découpent quatre profils ; les points bleus "
-        "sont les pays commentés, les gris servent de contexte.",
-        "Une corrélation faible n'exclut pas des logiques régionales : il ne s'agit pas d'un lien causal.",
     ),
     Question(
         "q7", 2, 7,
         "Les régions s'ouvrent-elles davantage à leurs voisins qu'au reste du monde ?",
         "Ouverture entre régions",
-        "Ligne : région du passeport ; colonne : région visitée. Chaque case donne la part des "
-        "relations sans démarche préalable. Cadre noir (diagonale) : voyages dans sa propre région ; "
-        "cadre orange : la relation la plus fermée.",
-        "Moyenne de relations pays à pays, non pondérée par la population ni par les flux réels.",
     ),
     Question(
         "q8", 2, 8,
         "Les grands blocs régionaux forment-ils des « clubs » de mobilité ?",
         "Clubs de mobilité",
-        "Pour chaque organisation : à droite, l'ouverture entre membres ; à gauche, vers les non-membres. "
-        "Plus le trait gris est long, plus l'appartenance au club compte.",
-        "La liste des membres (2025) provient des sites officiels des organisations, pas du jeu de données.",
     ),
 )
 

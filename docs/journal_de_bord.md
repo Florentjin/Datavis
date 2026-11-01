@@ -13,13 +13,13 @@ img { display: block; width: 100%; max-height: 82mm; object-fit: contain; margin
 .sub { font-size: 9.5pt; color: #4A596D; margin: 0 0 6pt; }
 </style>
 
-# Passeports : une hiérarchie durable de la mobilité ?
+# Passeports : une hiérarchie de la mobilité ?
 
 <p class="sub"><strong>Journal de bord analytique</strong> · M2 MIAGE Dauphine 2026–2027 · Raphaël, Florent, Mao, Capucine · Henley Passport Index (TidyTuesday 2025-09-09)</p>
 
 ## 1. Prompt initial et contexte
 
-**Problématique.** Le régime mondial des visas organise-t-il une hiérarchie durable de la mobilité : qui peut circuler, qui accueille, et selon quelles réciprocités ?
+**Problématique.** Le régime mondial des visas organise-t-il une hiérarchie de la mobilité : qui peut circuler, qui accueille, et selon quelles réciprocités ?
 
 **Destinataire et intention.** Analystes, journalistes de données et décideurs publics. Intention : *communiquer un constat* chiffré sur les inégalités de mobilité, sans prescrire ni attribuer de cause.
 

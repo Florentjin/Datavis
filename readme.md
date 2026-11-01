@@ -1,10 +1,10 @@
-# Passeports : une hiérarchie durable de la mobilité ?
+# Passeports : une hiérarchie de la mobilité ?
 
 Projet Dataviz & IA — M2 MIAGE, groupe de quatre. Application Python **Streamlit + Plotly**
 construite pour être **projetée** pendant l'oral : une page par question, des graphiques figés
 (aucun survol nécessaire) qui portent directement leurs valeurs clés.
 
-**Problématique.** Le régime mondial des visas organise-t-il une hiérarchie durable de la
+**Problématique.** Le régime mondial des visas organise-t-il une hiérarchie de la
 mobilité : qui peut circuler, qui accueille, et selon quelles réciprocités ?
 
 Public : analystes, journalistes et décideurs publics intéressés par les inégalités de mobilité.

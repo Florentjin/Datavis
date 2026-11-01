@@ -33,7 +33,7 @@ l'élément qui le prouve. Ne pas faire l'inventaire des boutons.
 | 4:25–5:10 | Mao | Q6 | Accueillir largement ne rend pas un passeport puissant : r = 0,13. Quatre quadrants, pays nommés. |
 | 5:10–5:55 | Capucine | Q7 | Les 7 régions s'ouvrent davantage à leurs voisins ; le verrou le plus fort : Afrique → Europe, 4 %. |
 | 5:55–6:35 | Capucine | Q8 | Les 7 clubs régionaux ouvrent plus entre membres ; record CEDEAO, +75 points. |
-| 6:35–7:15 | Capucine | Synthèse (« Méthode et limites ») | Hiérarchie durable mais pas figée. Limites : pas d'historique des régimes, pas de pondération par population, aucune cause démontrée. L'IA a proposé ; nous avons audité (8 arbitrages, journal p. 2). |
+| 6:35–7:15 | Capucine | Synthèse (« Méthode et limites ») | Hiérarchie nette mais pas figée. Limites : pas d'historique des régimes, pas de pondération par population, aucune cause démontrée. L'IA a proposé ; nous avons audité (8 arbitrages, journal p. 2). |
 
 **Secours** : si l'application ne démarre pas, projeter
 `livrables/captures/final_q1.png` à `final_q8.png` dans le même ordre.

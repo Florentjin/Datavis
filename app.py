@@ -81,12 +81,17 @@ def go_to(key: str) -> None:
     st.session_state["page"] = key
 
 
+def home_button(container, key: str) -> None:
+    container.button("🏠", on_click=go_to, args=("accueil",), key=key, help="Accueil", width="stretch")
+
+
 def navigation_buttons(key: str) -> None:
     index = PAGES.index(key)
-    left, _, right = st.columns([1, 3, 1])
+    left, _, middle, _, right = st.columns([4, 3, 1, 3, 4])
     if index > 0:
         left.button(f"← {page_label(PAGES[index - 1])}", on_click=go_to, args=(PAGES[index - 1],),
                     key=f"prev_{key}", width="stretch")
+        home_button(middle, f"home_{key}")
     if index < len(PAGES) - 1:
         right.button(f"{page_label(PAGES[index + 1])} →", on_click=go_to, args=(PAGES[index + 1],),
                      key=f"next_{key}", type="primary", width="stretch")
@@ -104,22 +109,19 @@ def sidebar() -> str:
 def question_header(key: str) -> None:
     """La question en en-tête ; la réponse est le titre du graphique (dite une seule fois)."""
     question = BY_KEY[key]
-    text, previous, following = st.columns([14, 1, 1], vertical_alignment="center")
+    text, previous, home, following = st.columns([21, 1, 1, 1], vertical_alignment="center")
     text.markdown(f"<div class='eyebrow'>{PARTS[question.part]} · question {question.number}/8</div>",
                   unsafe_allow_html=True)
     text.header(question.question, anchor=False)
     index = PAGES.index(key)
     previous.button("←", on_click=go_to, args=(PAGES[index - 1],), key=f"top_prev_{key}",
                     help=page_label(PAGES[index - 1]), width="stretch")
+    home_button(home, f"top_home_{key}")
     following.button("→", on_click=go_to, args=(PAGES[index + 1],), key=f"top_next_{key}",
                      help=page_label(PAGES[index + 1]), type="primary", width="stretch")
 
 
 def question_footer(key: str, table: pd.DataFrame) -> None:
-    question = BY_KEY[key]
-    reading, limit = st.columns(2)
-    reading.markdown(f"**Comment lire.** {question.how_to_read}")
-    limit.markdown(f"**Limite.** {question.limit}")
     with st.expander("Voir les données du graphique"):
         st.dataframe(table, hide_index=True, width="stretch")
     navigation_buttons(key)
@@ -139,8 +141,8 @@ def labelled(frame: pd.DataFrame, columns: dict[str, str]) -> pd.DataFrame:
 
 # Pages ----------------------------------------------------------------------------
 def home(rank: pd.DataFrame, access: pd.DataFrame) -> None:
-    st.markdown("<div class='eyebrow'>Projet Dataviz &amp; IA · M2 MIAGE</div>", unsafe_allow_html=True)
-    st.title("Passeports : une hiérarchie durable de la mobilité ?")
+    st.markdown("<div class='eyebrow'>Projet IA · M2 MIAGE</div>", unsafe_allow_html=True)
+    st.title("Passeports : une hiérarchie de la mobilité ?")
     st.markdown(f"<div class='takeaway'><b>Problématique.</b> {PROBLEM}</div>", unsafe_allow_html=True)
     st.caption(f"Public visé : {AUDIENCE}")
     years = metrics.valid_years(rank)
@@ -154,7 +156,6 @@ def home(rank: pd.DataFrame, access: pd.DataFrame) -> None:
         st.markdown(f"**{title}**")
         for question in (item for item in QUESTIONS if item.part == part):
             st.markdown(f"- **Q{question.number}.** {question.question}")
-    st.caption("Chaque page présente un graphique lisible sans souris : les valeurs clés sont écrites dessus.")
     navigation_buttons("accueil")
 
 
@@ -264,7 +265,7 @@ def synthesis(rank: pd.DataFrame, access: pd.DataFrame) -> None:
             st.markdown(f"**Q{question.number} · {question.short}.** {messages[question.key]}")
     st.subheader("Réponse")
     st.markdown(
-        "Oui, une hiérarchie durable existe : presque tous les passeports progressent, mais l'écart absolu entre "
+        "Oui, une hiérarchie existe : presque tous les passeports progressent, mais l'écart absolu entre "
         "forts et faibles s'est creusé et suit la géographie (Europe en tête ; Afrique, Asie et Moyen-Orient en "
         "retrait). Elle se lit aussi dans les conditions d'entrée : les relations à sens unique profitent aux "
         "passeports déjà puissants. Accueillir largement ne garantit pas la réciprocité, et la mobilité facile "
