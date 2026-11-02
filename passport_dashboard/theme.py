@@ -81,9 +81,11 @@ STATIC_CONFIG = {"staticPlot": True, "displayModeBar": False, "responsive": True
 
 
 def title_text(message: str, subtitle: str) -> str:
-    """Titre-message en gras et sous-titre de lecture, coupés pour tenir à l'écran."""
-    head = "<br>".join(textwrap.wrap(message, 92))
-    sub = "<br>".join(textwrap.wrap(subtitle, 140))
+    """Titre-message en gras, puis clé de lecture en liste à puces (un élément « · » par ligne)."""
+    head = "<br>".join(textwrap.wrap(message, 135))
+    items = [item.strip() for item in subtitle.split(" · ") if item.strip()]
+    items = [item[0].upper() + item[1:] for item in items]
+    sub = "<br>".join("<br>   ".join(textwrap.wrap(f"• {item}", 140)) for item in items)
     return f"<b>{head}</b><br><span style='font-size:{SUBTITLE_SIZE}px;color:{MUTED_COLOR}'>{sub}</span>"
 
 
@@ -102,17 +104,15 @@ def apply_theme(figure: go.Figure, *, height: int = FIGURE_HEIGHT, legend: bool 
     current = figure.layout.margin
     margin.update({side: getattr(current, side) for side in margin if getattr(current, side) is not None})
     lines = title_lines(figure)
-    margin["t"] = 40 + lines * TITLE_LINE_PX + (LEGEND_PX if legend else 0) + top_extra
-    # Plotly centre les titres multilignes : on fixe donc leur centre en pixels.
-    center = 12 + lines * TITLE_LINE_PX / 2
+    margin["t"] = 60 + lines * TITLE_LINE_PX + (LEGEND_PX if legend else 0) + top_extra
     figure.update_layout(
         template="plotly_white",
         height=height,
         paper_bgcolor="#FFFFFF",
         plot_bgcolor="#FFFFFF",
         font={"family": FONT_FAMILY, "size": BASE_FONT_SIZE, "color": TEXT_COLOR},
-        title={"x": 0.01, "xanchor": "left", "y": 1 - center / height, "yref": "container",
-               "yanchor": "middle", "font": {"size": TITLE_SIZE}},
+        title={"x": 0.01, "xanchor": "left", "y": 1 - 44 / height, "yref": "container",
+               "yanchor": "top", "font": {"size": TITLE_SIZE}},
         margin=margin,
         hovermode=False,
         showlegend=legend,
