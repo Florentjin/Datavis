@@ -20,6 +20,7 @@ from passport_dashboard.story import fr, pct, signed
 from passport_dashboard.theme import (
     ACCENT_COLOR,
     CONTEXT_COLOR,
+    FIGURE_HEIGHT,
     HIGHLIGHT_COLOR,
     LABEL_SIZE,
     MIN_TEXT_SIZE,
@@ -208,6 +209,8 @@ def biggest_changes(selection: pd.DataFrame, changes: pd.DataFrame, start: int, 
             text=labels, textposition="outside", cliponaxis=False, textfont={"size": LABEL_SIZE},
             showlegend=False,
         ), row=row, col=1)
+        # Liste explicite : sinon Plotly masque un nom sur deux quand les barres sont nombreuses.
+        figure.update_yaxes(tickmode="array", tickvals=names, ticktext=names, row=row, col=1)
         # Une étiquette à gauche d'une barre négative masquerait le nom du pays.
         for item, name in zip(group.itertuples(), names):
             if item.delta < 0:
@@ -230,7 +233,7 @@ def biggest_changes(selection: pd.DataFrame, changes: pd.DataFrame, start: int, 
             f"Barre : variation du nombre de destinations · entre parenthèses : score {start} → {end}",
         ),
     )
-    figure = apply_theme(figure, top_extra=48)
+    figure = apply_theme(figure, top_extra=48, height=FIGURE_HEIGHT + max(0, max(len(high), len(low)) - 5) * 2 * 36)
     figure.update_yaxes(tickfont={"color": TEXT_COLOR})
     return figure
 
@@ -390,16 +393,15 @@ def regional_openness(matrix: pd.DataFrame) -> go.Figure:
     figure.update_layout(
         title_text=title_text(
             story.q7(matrix),
-            "Case : % des couples passeport → pays où l'entrée se fait sans démarche préalable · "
-            "cadre noir : sa propre région · cadre orange : minimum",
+            "Case : % des couples passeport → pays où l'entrée se fait sans démarche préalable",
         ),
         annotations=annotations, shapes=shapes,
     )
     figure = apply_theme(figure, top_extra=70)
     figure.update_xaxes(tickvals=list(range(n)), ticktext=labels, side="top", showgrid=False,
-                        title_text="Région visitée ➜", title_standoff=6, tickfont={"color": TEXT_COLOR})
+                        title_text="Pays visités (destination) ➜", title_standoff=14, tickfont={"color": TEXT_COLOR})
     figure.update_yaxes(tickvals=list(range(n)), ticktext=labels, autorange="reversed", showgrid=False,
-                        title_text="Région du passeport", tickfont={"color": TEXT_COLOR})
+                        title_text="Passeport du voyageur", tickfont={"color": TEXT_COLOR})
     return figure
 
 
@@ -439,7 +441,7 @@ def clubs(table: pd.DataFrame, world_rate: float) -> go.Figure:
     figure.update_layout(
         title_text=title_text(
             story.q8(table),
-            "Part des relations où le passeport d'un membre entre sans démarche préalable · membres 2025 des organisations",
+            "Part des relations où le passeport d'un membre entre sans démarche préalable",
         ),
         annotations=annotations, margin={"r": 140},
     )

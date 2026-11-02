@@ -65,3 +65,14 @@ def test_text_is_large_enough_for_a_projector(figures, key):
     figure, _ = figures[key]
     assert min(_sizes(figure)) >= MIN_TEXT_SIZE
     assert figure.layout.height == FIGURE_HEIGHT
+
+def test_q3_shows_every_country_name():
+    from passport_dashboard import charts, metrics
+
+    rank = load_rank(ROOT / "rank_by_year.csv")
+    first, latest = int(rank["year"].min()), int(rank["year"].max())
+    changes = metrics.score_changes(rank, first, latest)
+    figure = charts.biggest_changes(metrics.extremes(changes, 15), changes, first, latest)
+    shown = list(figure.layout.yaxis.tickvals) + list(figure.layout.yaxis2.tickvals)
+    assert len(shown) == 30
+    assert figure.layout.height > FIGURE_HEIGHT

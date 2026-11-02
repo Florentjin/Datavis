@@ -34,6 +34,7 @@ def main() -> None:
         SOURCE.read_text(encoding="utf-8"), extensions=["fenced_code", "tables", "md_in_html"]
     )
     HTML.write_text(f'<!doctype html><html lang="fr"><meta charset="utf-8">{body}</html>', encoding="utf-8")
+    before = PDF.stat().st_mtime if PDF.exists() else None
     try:
         subprocess.run(
             [find_browser(), "--headless", "--disable-gpu", "--no-pdf-header-footer",
@@ -42,6 +43,8 @@ def main() -> None:
         )
     finally:
         HTML.unlink(missing_ok=True)
+    if not PDF.exists() or PDF.stat().st_mtime == before:
+        sys.exit(f"PDF non mis à jour : fermez {PDF.name} s'il est ouvert, puis relancez.")
     print(f"PDF généré : {PDF}")
 
 
